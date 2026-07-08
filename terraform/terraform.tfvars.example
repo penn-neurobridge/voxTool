@@ -1,0 +1,22 @@
+# Copy to terraform.tfvars (gitignored) and fill in values.
+# Deploy dev:  terraform workspace select dev  && terraform apply -var="environment=dev"
+# Deploy prod: terraform workspace select prod && terraform apply -var="environment=prod"
+
+aws_region   = "us-east-1"
+environment  = "dev"
+project_name = "voxtool"
+
+# Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+flask_secret_key = "CHANGE_ME"
+
+# Set to false if your AWS user lacks IAM write permissions (only IAMReadOnlyAccess).
+# Then have an admin create the voxtool-github-actions user separately.
+create_github_actions_user = true
+
+# Optional custom domain (requires route53.tf and DNS delegation)
+# domain_name = "voxtool.example.com"
+
+# Override after first deploy once you know CloudFront URL:
+# cors_allowed_origins = "https://d1234abcd.cloudfront.net,http://localhost:3000"
+
+eb_instance_type = "t3.small"

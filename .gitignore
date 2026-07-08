@@ -1,11 +1,14 @@
 *.pyc
 __pycache__/
 *.egg-info/
+terraform_*.zip
 
 # Web app
 web/frontend/node_modules/
 web/frontend/build/
+web/frontend/.env.development
 web/backend/__pycache__/
+web/deploy.zip
 web/backend/data/*.nii
 web/backend/data/*.nii.gz
 web/backend/annotations/*.json

@@ -16,6 +16,33 @@ from legacy_interpolator import interpolate_between_endpoints, lead_radius_mm
 scans_bp = Blueprint("scans", __name__)
 
 
+def _volume_warm_enabled() -> bool:
+    return os.environ.get("ENABLE_VOLUME_WARM", "").lower() in ("1", "true", "yes")
+
+
+class _VoxelAccess:
+    """Fast in-RAM voxel reads when warmed; otherwise mmap z-slabs."""
+
+    def __init__(self, filepath: str):
+        if volume_is_cached(filepath):
+            vol = get_volume(filepath)
+            self._data = vol.data
+            self.affine = vol.affine
+            self.shape = vol.data.shape
+            self._slab = None
+        else:
+            dataobj, affine, shape = _open_scan_dataobj(filepath)
+            self._data = None
+            self.affine = affine
+            self.shape = shape
+            self._slab = _SlabCache(dataobj)
+
+    def value(self, i: int, j: int, k: int) -> float:
+        if self._data is not None:
+            return float(self._data[i, j, k])
+        return self._slab.value(i, j, k)
+
+
 def _dilate_mask_26(mask: np.ndarray) -> np.ndarray:
     """Binary 26-neighbor dilation (connect tiny breaks in bright voxels)."""
     p = np.pad(mask, 1, mode="constant", constant_values=False)
@@ -609,13 +636,19 @@ def warm_cloud(filename):
     body = request.get_json(silent=True) or {}
     threshold_pct = float(body.get("threshold_pct", 99.96))
     if _install_bundled_cloud_cache(filepath, threshold_pct):
+        if _volume_warm_enabled():
+            _warm_volume_async(filepath)
         return jsonify({"warming": False, "ready": True, "threshold_pct": threshold_pct})
 
     cache_path = _cloud_cache_path(filepath, threshold_pct)
     if os.path.isfile(cache_path):
+        if _volume_warm_enabled():
+            _warm_volume_async(filepath)
         return jsonify({"warming": False, "ready": True, "threshold_pct": threshold_pct})
 
     _warm_cloud_cache_async(filepath, threshold_pct)
+    if _volume_warm_enabled():
+        _warm_volume_async(filepath)
     return jsonify({"warming": True, "ready": False, "threshold_pct": threshold_pct})
 
 
@@ -698,13 +731,20 @@ def threshold_cloud(filename):
 
 @scans_bp.route("/<filename>/warm_volume", methods=["POST"])
 def warm_volume_route(filename):
-    """No-op on cloud deploy — loading full CT OOMs Render free tier."""
+    """Preload float32 CT into worker RAM when ENABLE_VOLUME_WARM is set (AWS EB)."""
     data_dir = current_app.config["DATA_DIR"]
     filepath = os.path.join(data_dir, filename)
     if not os.path.isfile(filepath):
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
-    return jsonify({"ready": True, "warming": False, "skipped": True})
+    if not _volume_warm_enabled():
+        return jsonify({"ready": True, "warming": False, "skipped": True})
+
+    if volume_is_cached(filepath):
+        return jsonify({"ready": True, "warming": False, "skipped": False})
+
+    _warm_volume_async(filepath)
+    return jsonify({"ready": False, "warming": True, "skipped": False})
 
 
 @scans_bp.route("/<filename>/volume_ready", methods=["GET"])
@@ -750,14 +790,15 @@ def bright_component(filename):
     if not (0 < threshold_pct <= 100):
         return jsonify({"success": False, "error": "threshold_pct must be in (0, 100]"}), 400
 
-    dataobj, affine, shape = _open_scan_dataobj(filepath)
+    vox = _VoxelAccess(filepath)
+    affine = vox.affine
+    shape = vox.shape
     si, sj, sk = int(seed[0]), int(seed[1]), int(seed[2])
     if not (0 <= si < shape[0] and 0 <= sj < shape[1] and 0 <= sk < shape[2]):
         return jsonify({"success": False, "error": "seed_voxel out of bounds"}), 400
 
     thr = _threshold_for_pick(filepath, threshold_pct, body)
-    slab = _SlabCache(dataobj)
-    if slab.value(si, sj, sk) < thr:
+    if vox.value(si, sj, sk) < thr:
         return jsonify(
             {
                 "success": False,
@@ -794,7 +835,7 @@ def bright_component(filename):
             continue
         if not within_ball(i, j, k):
             continue
-        if slab.value(i, j, k) < thr:
+        if vox.value(i, j, k) < thr:
             continue
         visited.add((i, j, k))
         component.append([int(i), int(j), int(k)])

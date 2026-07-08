@@ -1,0 +1,46 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+      - web-app
+    paths:
+      - "web/backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set environment name
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "env_name=voxtool-prod-env" >> "$GITHUB_OUTPUT"
+            echo "app_name=voxtool-prod-app" >> "$GITHUB_OUTPUT"
+          else
+            echo "env_name=voxtool-dev-env" >> "$GITHUB_OUTPUT"
+            echo "app_name=voxtool-dev-app" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate deployment package
+        run: |
+          cd web/backend
+          zip -r ../deploy.zip . \
+            -x "*.git*" "*__pycache__/*" "*.DS_Store" "*.log" \
+            -x "data/*" "cloud_caches/*"
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ steps.set-env.outputs.app_name }}
+          environment_name: ${{ steps.set-env.outputs.env_name }}
+          version_label: "ver-${{ github.sha }}"
+          region: us-east-1
+          deployment_package: web/deploy.zip

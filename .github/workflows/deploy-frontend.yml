@@ -1,0 +1,65 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+      - web-app
+    paths:
+      - "web/frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install and build
+        run: |
+          npm ci
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            export REACT_APP_API_URL="${{ secrets.REACT_APP_API_URL_PROD }}"
+          else
+            export REACT_APP_API_URL="${{ secrets.REACT_APP_API_URL_DEV }}"
+          fi
+          echo "Building with REACT_APP_API_URL=$REACT_APP_API_URL"
+          npm run build
+        env:
+          CI: false
+
+      - name: Deploy to S3 (dev)
+        if: github.ref == 'refs/heads/web-app'
+        run: aws s3 sync build/ s3://voxtool-dev-frontend --delete
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Deploy to S3 (prod)
+        if: github.ref == 'refs/heads/main'
+        run: aws s3 sync build/ s3://voxtool-prod-frontend --delete
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Invalidate CloudFront (dev)
+        if: github.ref == 'refs/heads/web-app'
+        run: aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_ID_DEV }}" --paths "/*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+
+      - name: Invalidate CloudFront (prod)
+        if: github.ref == 'refs/heads/main'
+        run: aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_ID_PROD }}" --paths "/*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1

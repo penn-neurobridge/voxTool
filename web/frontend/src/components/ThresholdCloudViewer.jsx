@@ -130,6 +130,12 @@ export default function ThresholdCloudViewer({
         signal: AbortSignal.timeout(30_000),
       }).catch(() => {});
 
+      // Preload full CT into RAM on AWS (no-op on Render).
+      fetch(`${API}/api/scans/${scanFilename}/warm_volume`, {
+        method: "POST",
+        signal: AbortSignal.timeout(30_000),
+      }).catch(() => {});
+
       let cacheReady = false;
       for (let attempt = 0; attempt < 12; attempt++) {
         const readyRes = await fetch(

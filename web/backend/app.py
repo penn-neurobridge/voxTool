@@ -7,9 +7,16 @@ from routes.annotations import annotations_bp
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def _cors_origins():
+    raw = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+    if raw.strip():
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    return ["http://localhost:3000"]
+
+
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    CORS(app, origins=_cors_origins())
 
     app.config["DATA_DIR"] = os.path.join(BASE_DIR, "data")
     app.config["ANNOTATIONS_DIR"] = os.path.join(BASE_DIR, "annotations")
@@ -22,11 +29,16 @@ def create_app():
     app.register_blueprint(scans_bp, url_prefix="/api/scans")
     app.register_blueprint(annotations_bp, url_prefix="/api/annotations")
 
+    @app.route("/")
+    def root_health():
+        return "OK", 200
+
     @app.route("/api/health")
     def health():
+        commit = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GITHUB_SHA") or "local"
         return {
             "status": "ok",
-            "build": os.environ.get("RENDER_GIT_COMMIT", "local")[:8],
+            "build": commit[:8],
         }
 
     return app
