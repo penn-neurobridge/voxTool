@@ -102,7 +102,7 @@ export default function Toolbar({
 
       <div className="toolbar-divider" />
 
-      <div className="toolbar-presets" title="Intensity window presets">
+      <div className="toolbar-presets" title="CT intensity window (Hounsfield units)">
         {PRESETS.map((p) => {
           const active = p.min === calMin && p.max === calMax;
           return (
@@ -112,6 +112,7 @@ export default function Toolbar({
               className={`btn btn-compact ${active ? "btn-primary" : ""}`}
               onClick={() => applyPreset(p)}
               disabled={nvDisabled}
+              title={`${p.label} window: ${p.min} → ${p.max} HU`}
             >
               {p.label}
             </button>
@@ -122,18 +123,18 @@ export default function Toolbar({
           className="btn btn-compact"
           onClick={applyAuto}
           disabled={nvDisabled || autoLoading}
-          title="1st–99th percentile of this scan"
+          title="Auto window: 1st–99th percentile of this scan"
         >
           {autoLoading ? "…" : "Auto"}
         </button>
       </div>
 
-      <label className="toolbar-slider">
+      <label className="toolbar-slider" title="Display intensities below this as black">
         Min
         <input
           type="range"
-          min={-200}
-          max={2000}
+          min={-1200}
+          max={4000}
           value={localMin}
           onChange={(e) => {
             const v = Number(e.target.value);
@@ -145,11 +146,11 @@ export default function Toolbar({
         <span className="threshold-value">{localMin}</span>
       </label>
 
-      <label className="toolbar-slider">
+      <label className="toolbar-slider" title="Display intensities above this as white">
         Max
         <input
           type="range"
-          min={0}
+          min={-200}
           max={5000}
           value={localMax}
           onChange={(e) => {

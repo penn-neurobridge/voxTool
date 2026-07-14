@@ -36,6 +36,8 @@ export default function ControlPanel({
   onSave,
   saving,
   onCleanScan,
+  loadFileInputRef,
+  onAnnotationFileSelected,
 }) {
   const [newLeadName, setNewLeadName] = useState("");
   const [newLeadType, setNewLeadType] = useState("D");
@@ -347,6 +349,13 @@ export default function ControlPanel({
       </div>
 
       <div className="sidebar-footer">
+        <input
+          ref={loadFileInputRef}
+          type="file"
+          accept="application/json,.json"
+          style={{ display: "none" }}
+          onChange={onAnnotationFileSelected}
+        />
         <div className="footer-row">
           <button type="button" className="btn" onClick={onLoadScan}>
             Load scan
@@ -363,6 +372,7 @@ export default function ControlPanel({
             className="btn"
             onClick={onLoadCoordinates}
             disabled={!scanLoaded}
+            title="Open a voxel_coordinates.json (or web export) from your computer"
           >
             Load coordinates
           </button>
@@ -373,6 +383,7 @@ export default function ControlPanel({
             className="btn btn-primary"
             onClick={onSave}
             disabled={!scanLoaded || saving}
+            title="Save leads & contacts as JSON to a file you choose"
           >
             {saving ? "Saving…" : "Save as…"}
           </button>

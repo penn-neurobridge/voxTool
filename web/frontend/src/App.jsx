@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import "./App.css";
 import Toolbar from "./components/Toolbar";
 import ControlPanel from "./components/ControlPanel";
@@ -70,6 +70,9 @@ export default function App() {
   const [scanList, setScanList] = useState([]);
   const [pickerSelected, setPickerSelected] = useState("");
   const [uploadingScan, setUploadingScan] = useState(false);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerError, setPickerError] = useState("");
+  const [thresholdStatus, setThresholdStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   // {tone: 'ok'|'warn'|'err', text: string} — shows under the Interpolate button.
   const [interpStatus, setInterpStatus] = useState(null);
@@ -86,15 +89,33 @@ export default function App() {
 
 
   const openScanPicker = useCallback(async () => {
+    // Open immediately so "Load scan" always shows a reaction (don't wait on network).
+    setPickerError("");
+    setPickerLoading(true);
+    setShowPicker(true);
     try {
-      const res = await fetch(`${API}/api/scans/`);
-      const data = await res.json();
-      setScanList(data);
-      setPickerSelected(data[0] || "");
-      setShowPicker(true);
+      const res = await fetch(`${API}/api/scans/`, {
+        signal: AbortSignal.timeout(20_000),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(
+          (data && data.error) || `Could not list scans (HTTP ${res.status})`
+        );
+      }
+      const list = Array.isArray(data) ? data : [];
+      setScanList(list);
+      setPickerSelected((prev) =>
+        prev && list.includes(prev) ? prev : list[0] || ""
+      );
     } catch (err) {
       console.error("openScanPicker:", err);
-      alert("Could not reach backend. Is Flask running on port 5001?");
+      // Keep any previously known list; upload still works even if listing fails.
+      setPickerError(
+        `Could not refresh the scan list (${err.message || err}). You can still upload below.`
+      );
+    } finally {
+      setPickerLoading(false);
     }
   }, []);
 
@@ -105,32 +126,61 @@ export default function App() {
     setShowPicker(false);
   }, [pickerSelected]);
 
+  const handleScanDelete = useCallback(
+    async (filename) => {
+      if (!filename) return;
+      if (!window.confirm(`Remove "${filename}" from the server?`)) return;
+      try {
+        const res = await fetch(
+          `${API}/api/scans/${encodeURIComponent(filename)}`,
+          { method: "DELETE", signal: AbortSignal.timeout(30_000) }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || `Delete failed (${res.status})`);
+        }
+        setScanList((prev) => prev.filter((s) => s !== filename));
+        if (pickerSelected === filename) setPickerSelected("");
+        if (scanFilename === filename) setScanFilename("");
+      } catch (err) {
+        console.error("handleScanDelete:", err);
+        setPickerError(`Could not delete scan: ${err.message || err}`);
+      }
+    },
+    [pickerSelected, scanFilename]
+  );
+
   const handleScanUpload = useCallback(
     async (file) => {
       if (!file) return;
       const lower = file.name.toLowerCase();
       if (!lower.endsWith(".nii") && !lower.endsWith(".nii.gz")) {
-        alert("Please choose a .nii or .nii.gz file.");
+        setPickerError("Please choose a .nii or .nii.gz file.");
         return;
       }
       setUploadingScan(true);
+      setPickerError("");
+      setPickerLoading(false);
       try {
-        await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(90_000) }).catch(
-          () => {}
-        );
+        // Brief health ping only — do not block a multi-minute upload on this.
+        await fetch(`${API}/api/health`, {
+          signal: AbortSignal.timeout(8_000),
+        }).catch(() => {});
 
         const form = new FormData();
         form.append("file", file);
         const res = await fetch(`${API}/api/scans/upload`, {
           method: "POST",
           body: form,
-          signal: AbortSignal.timeout(300_000),
+          signal: AbortSignal.timeout(600_000), // large NIfTI over CloudFront
         });
         let data = {};
         try {
           data = await res.json();
         } catch {
-          throw new Error(`Upload failed (HTTP ${res.status}). Connection may have dropped — try again.`);
+          throw new Error(
+            `Upload failed (HTTP ${res.status}). Connection may have dropped — try again.`
+          );
         }
         if (!res.ok || !data.success) {
           throw new Error(data.error || `Upload failed (${res.status})`);
@@ -139,26 +189,27 @@ export default function App() {
         const listRes = await fetch(`${API}/api/scans/`, {
           signal: AbortSignal.timeout(30_000),
         });
-        const list = await listRes.json();
-        if (!Array.isArray(list) || !list.includes(data.filename)) {
-          throw new Error(
-            `${data.filename} did not appear on the server after upload. Wait 30s and try again.`
-          );
+        const listRaw = await listRes.json().catch(() => []);
+        const list = Array.isArray(listRaw) ? listRaw : [];
+        if (!list.includes(data.filename)) {
+          list.push(data.filename);
         }
         setScanList(list);
         setPickerSelected(data.filename);
         setScanFilename(data.filename);
         setShowPicker(false);
-        alert(
-          `Uploaded ${data.filename} (${data.size_mb} MB).\n\n` +
-            "You can open Threshold cloud now."
-        );
+        setThresholdStatus({
+          tone: "ok",
+          text: `Uploaded ${data.filename} (${data.size_mb} MB). Open Threshold cloud when ready.`,
+        });
       } catch (err) {
         console.error("handleScanUpload:", err);
-        alert(
-          `Upload failed: ${err.message || err}. ` +
-            `Large files (~80 MB) can take a few minutes on Render free tier.`
-        );
+        const msg = err?.message || String(err);
+        const hint =
+          msg.includes("timed out") || err?.name === "TimeoutError"
+            ? " Upload timed out — try again (large files can take a few minutes)."
+            : " Large files (~80 MB) can take a minute or two.";
+        setPickerError(`Upload failed: ${msg}.${hint}`);
       } finally {
         setUploadingScan(false);
       }
@@ -171,10 +222,19 @@ export default function App() {
     if (Number.isFinite(v) && v > 0 && v <= 100) {
       setThresholdPct(v);
       setThresholdInput(String(v));
+      setThresholdStatus({
+        tone: "ok",
+        text: scanFilename
+          ? `CT threshold set to ${v}. Rebuilding applies on Threshold cloud.`
+          : `CT threshold set to ${v}. Load a scan to use it.`,
+      });
     } else {
-      alert("CT threshold must be a percentile between 0 and 100 (e.g. 99.96).");
+      setThresholdStatus({
+        tone: "err",
+        text: "CT threshold must be a percentile between 0 and 100 (e.g. 99.96).",
+      });
     }
-  }, [thresholdInput]);
+  }, [thresholdInput, scanFilename]);
 
   const handleCloudVoxelPick = useCallback(
     async (pick) => {
@@ -266,13 +326,9 @@ export default function App() {
       );
       return;
     }
-    const dup = contacts.some(
+    const dupIdx = contacts.findIndex(
       (c) => c.lead === selectedLead && c.label === label
     );
-    if (dup) {
-      alert(`${selectedLead}${label} is already in the contact list.`);
-      return;
-    }
     let voxel = pendingContact.voxel;
     if (!voxel || voxel.length !== 3) {
       try {
@@ -299,10 +355,15 @@ export default function App() {
       coord: { ...pendingContact.coord },
       voxel: voxel && voxel.length === 3 ? [...voxel] : null,
     };
-    const updated = [...contacts, newContact];
+    const updated =
+      dupIdx >= 0
+        ? contacts.map((c, i) => (i === dupIdx ? newContact : c))
+        : [...contacts, newContact];
     setContacts(updated);
     setPendingContact(null);
-    setContactIndexInput(nextLabelForLead(selectedLead, updated));
+    setContactIndexInput(
+      dupIdx >= 0 ? label : nextLabelForLead(selectedLead, updated)
+    );
   }, [
     pendingContact,
     selectedLead,
@@ -325,82 +386,204 @@ export default function App() {
     setPendingContact(null);
   }, [contacts.length, pendingContact]);
 
-  const saveAnnotations = useCallback(async () => {
-    if (!scanFilename) return;
-    setSaving(true);
-    const scanId = scanFilename.replace(/\.nii(\.gz)?$/, "");
-    const payload = {
-      schema_version: 1,
-      scan_id: scanId,
-      scan_filename: scanFilename,
-      include_bipolar_pairs: includeBipolarPairs,
-      leads: leads.map((l) => ({
-        name: l.name,
-        type: l.type,
-        dimensions: l.dimensions,
-      })),
-      contacts: contacts.map((c) => {
-        const cs = {
-          mm: { R: c.coord.R, A: c.coord.A, S: c.coord.S },
-        };
-        if (c.voxel && c.voxel.length === 3) {
-          cs.voxel = [c.voxel[0], c.voxel[1], c.voxel[2]];
+  const loadFileInputRef = useRef(null);
+
+  /** 1-based contact label → legacy lead_loc [row, col]. */
+  const labelToLeadLoc = (label, dimensions) => {
+    const n = Math.max(1, parseInt(label, 10) || 1) - 1;
+    const dx = Math.max(1, dimensions?.[0] || 1);
+    const dy = Math.max(1, dimensions?.[1] || 1);
+    if (dx === 1) return [Math.min(n, dy - 1), 0];
+    if (dy === 1) return [0, Math.min(n, dx - 1)];
+    return [Math.floor(n / dx) % dy, n % dx];
+  };
+
+  /** Build legacy-compatible voxel_coordinates.json document. */
+  const buildExportDocument = useCallback(async () => {
+    if (!scanFilename) return null;
+    const leadsOut = {};
+    for (const lead of leads) {
+      const dims = lead.dimensions || [1, 8];
+      const leadContacts = contacts.filter((c) => c.lead === lead.name);
+      const contactEntries = [];
+      for (const c of leadContacts) {
+        let voxel = c.voxel && c.voxel.length === 3 ? [...c.voxel] : null;
+        if (!voxel && c.coord) {
+          try {
+            const res = await fetch(`${API}/api/scans/${scanFilename}/mm_to_voxel`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                point_mm: [c.coord.R, c.coord.A, c.coord.S],
+              }),
+            });
+            const d = await res.json();
+            if (d.voxel) voxel = d.voxel;
+          } catch (e) {
+            console.error("mm_to_voxel export:", e);
+          }
         }
-        return {
-          lead: c.lead,
-          label: c.label,
-          coordinate_spaces: cs,
+        const entry = {
+          name: `${lead.name}${c.label}`,
+          lead_group: 0,
+          lead_loc: labelToLeadLoc(c.label, dims),
+          coordinate_spaces: {
+            ct_voxel: {
+              raw: voxel
+                ? [
+                    Math.round(Number(voxel[0])),
+                    Math.round(Number(voxel[1])),
+                    Math.round(Number(voxel[2])),
+                  ]
+                : [0, 0, 0],
+            },
+          },
         };
-      }),
-    };
-    try {
-      await fetch(`${API}/api/annotations/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      alert("Annotations saved!");
-    } catch (err) {
-      console.error("saveAnnotations:", err);
-      alert("Failed to save annotations.");
+        if (c.coord) {
+          entry.coordinate_spaces.mm = {
+            R: c.coord.R,
+            A: c.coord.A,
+            S: c.coord.S,
+          };
+        }
+        contactEntries.push(entry);
+      }
+      leadsOut[lead.name] = {
+        contacts: contactEntries,
+        pairs: [],
+        n_groups: 1,
+        dimensions: dims,
+        type: lead.type || "D",
+      };
     }
-    setSaving(false);
+    return {
+      leads: leadsOut,
+      origin_ct: scanFilename,
+      include_bipolar_pairs: includeBipolarPairs,
+      exported_at: new Date().toISOString(),
+      schema_version: 2,
+    };
   }, [scanFilename, leads, contacts, includeBipolarPairs]);
 
-  const loadAnnotations = useCallback(async () => {
-    if (!scanFilename) return;
-    const scanId = scanFilename.replace(/\.nii(\.gz)?$/, "");
-
-    if (contacts.length > 0 || leads.length > 0) {
-      const ok = window.confirm(
-        `This will replace your current ${leads.length} lead(s) and ${contacts.length} contact(s) ` +
-          `with the saved annotations for ${scanId}. Continue?`
-      );
-      if (!ok) return;
+  const writeJsonFile = async (suggestedName, doc) => {
+    const text = JSON.stringify(doc, null, 2);
+    if (typeof window.showSaveFilePicker === "function") {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName,
+          types: [
+            {
+              description: "JSON",
+              accept: { "application/json": [".json"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(text);
+        await writable.close();
+        return true;
+      } catch (err) {
+        if (err?.name === "AbortError") return false;
+        console.warn("showSaveFilePicker failed, falling back:", err);
+      }
     }
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = suggestedName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  };
 
+  /** Save as… — pick a local JSON path (legacy-style export). */
+  const saveAnnotations = useCallback(async () => {
+    if (!scanFilename) return;
+    if (!leads.length && !contacts.length) {
+      alert("Nothing to save yet — add leads/contacts first.");
+      return;
+    }
+    setSaving(true);
     try {
-      const res = await fetch(`${API}/api/annotations/${scanId}`);
-      if (!res.ok) {
-        alert(`Failed to load annotations (HTTP ${res.status}).`);
-        return;
+      const doc = await buildExportDocument();
+      if (!doc) return;
+      const ok = await writeJsonFile("voxel_coordinates.json", doc);
+      if (ok) {
+        const nC = contacts.length;
+        const nL = leads.length;
+        alert(`Saved ${nC} contact(s) across ${nL} lead(s) to JSON.`);
       }
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        alert(`No saved annotations found for "${scanId}".`);
-        return;
+    } catch (err) {
+      console.error("saveAnnotations:", err);
+      alert(`Failed to save: ${err.message || err}`);
+    }
+    setSaving(false);
+  }, [scanFilename, leads, contacts, buildExportDocument]);
+
+  /** Apply a loaded annotation document (legacy or web formats). */
+  const applyAnnotationDocument = useCallback(
+    async (raw) => {
+      let data = raw;
+      if (Array.isArray(data)) {
+        if (!data.length) throw new Error("File contains no annotations.");
+        data = data[data.length - 1];
       }
-      const latest = data[data.length - 1];
-      const newLeads = (latest.leads || []).map((l) => ({
-        name: l.name,
-        type: l.type,
-        dimensions: l.dimensions,
-      }));
-      const rawContacts = latest.contacts || [];
+      if (!data || typeof data !== "object") {
+        throw new Error("Unrecognized annotation file.");
+      }
+
+      let newLeads = [];
+      let rawContacts = [];
+
+      // Legacy: { leads: { LA: { type, dimensions, contacts: [...] } } }
+      if (
+        data.leads &&
+        !Array.isArray(data.leads) &&
+        typeof data.leads === "object"
+      ) {
+        for (const [name, lead] of Object.entries(data.leads)) {
+          newLeads.push({
+            name,
+            type: lead.type || "D",
+            dimensions: lead.dimensions || [1, 8],
+          });
+          for (const c of lead.contacts || []) {
+            let label = c.name || "";
+            if (label.startsWith(name)) label = label.slice(name.length);
+            if (!label) label = "1";
+            const voxelRaw = c.coordinate_spaces?.ct_voxel?.raw;
+            const mm = c.coordinate_spaces?.mm;
+            rawContacts.push({
+              lead: name,
+              label: String(label),
+              coordinate_spaces: {
+                voxel: Array.isArray(voxelRaw) ? voxelRaw : null,
+                mm: mm || null,
+              },
+            });
+          }
+        }
+      } else if (Array.isArray(data.leads) && Array.isArray(data.contacts)) {
+        // Web schema
+        newLeads = data.leads.map((l) => ({
+          name: l.name,
+          type: l.type || "D",
+          dimensions: l.dimensions || [1, 8],
+        }));
+        rawContacts = data.contacts;
+      } else {
+        throw new Error(
+          "Unrecognized JSON. Expected legacy voxel_coordinates.json or web export."
+        );
+      }
+
       const newContacts = [];
       for (const c of rawContacts) {
         const mm = c.coordinate_spaces?.mm;
-        let voxel = c.coordinate_spaces?.voxel;
+        let voxel = c.coordinate_spaces?.voxel || c.coordinate_spaces?.ct_voxel?.raw;
         if (Array.isArray(voxel) && voxel.length === 3) {
           voxel = [Number(voxel[0]), Number(voxel[1]), Number(voxel[2])];
         } else {
@@ -444,7 +627,7 @@ export default function App() {
         if (!coord) continue;
         newContacts.push({
           lead: c.lead,
-          label: c.label,
+          label: String(c.label),
           coord,
           voxel,
         });
@@ -452,20 +635,52 @@ export default function App() {
 
       setLeads(newLeads);
       setContacts(newContacts);
-      setIncludeBipolarPairs(!!latest.include_bipolar_pairs);
+      setIncludeBipolarPairs(!!data.include_bipolar_pairs);
       setPendingContact(null);
-      if (newLeads.length && !newLeads.find((l) => l.name === selectedLead)) {
+      if (newLeads.length) {
         setSelectedLead(newLeads[0].name);
       }
-      alert(
-        `Loaded ${newContacts.length} contact(s) across ${newLeads.length} lead(s) ` +
-          `from ${scanId}.`
-      );
-    } catch (err) {
-      console.error("loadAnnotations failed:", err);
-      alert(`Failed to load annotations: ${err.message || err}`);
+      return { nContacts: newContacts.length, nLeads: newLeads.length };
+    },
+    [scanFilename]
+  );
+
+  /** Load coordinates — pick a local JSON file (legacy-style). */
+  const loadAnnotations = useCallback(() => {
+    if (!scanFilename) {
+      alert("Load a scan first, then open a coordinates JSON.");
+      return;
     }
-  }, [scanFilename, contacts.length, leads.length, selectedLead]);
+    if (contacts.length > 0 || leads.length > 0) {
+      const ok = window.confirm(
+        `This will replace your current ${leads.length} lead(s) and ${contacts.length} contact(s) ` +
+          `with the selected file. Continue?`
+      );
+      if (!ok) return;
+    }
+    loadFileInputRef.current?.click();
+  }, [scanFilename, contacts.length, leads.length]);
+
+  const onAnnotationFileSelected = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const raw = JSON.parse(text);
+        const { nContacts, nLeads } = await applyAnnotationDocument(raw);
+        alert(
+          `Loaded ${nContacts} contact(s) across ${nLeads} lead(s) from ${file.name}.`
+        );
+      } catch (err) {
+        console.error("loadAnnotations failed:", err);
+        alert(`Failed to load annotations: ${err.message || err}`);
+      }
+    },
+    [applyAnnotationDocument]
+  );
+
 
   useEffect(() => {
     const handler = (e) => {
@@ -804,6 +1019,8 @@ export default function App() {
           onSave={saveAnnotations}
           saving={saving}
           onCleanScan={cleanScan}
+          loadFileInputRef={loadFileInputRef}
+          onAnnotationFileSelected={onAnnotationFileSelected}
         />
       )}
 
@@ -840,6 +1057,14 @@ export default function App() {
             <button type="button" className="btn btn-compact" onClick={applyThreshold}>
               Update
             </button>
+            {thresholdStatus && (
+              <span
+                className={`ct-threshold-status ct-threshold-status-${thresholdStatus.tone}`}
+                title={thresholdStatus.text}
+              >
+                {thresholdStatus.text}
+              </span>
+            )}
           </div>
         </div>
 
@@ -889,14 +1114,16 @@ export default function App() {
           <div className="empty-state">
             <div>
               <p style={{ fontSize: 18, marginBottom: 8 }}>No scan loaded</p>
-              <p>
-                Use <strong>Load Scan</strong> in the sidebar to open a NIfTI CT
-                from the server.
+              <p style={{ marginBottom: 16 }}>
+                Upload a NIfTI CT (.nii / .nii.gz) to get started.
               </p>
-              <p style={{ marginTop: 8, fontSize: 12 }}>
-                Place <code>.nii</code> or <code>.nii.gz</code> files in{" "}
-                <code>web/backend/data/</code>
-              </p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={openScanPicker}
+              >
+                Load / upload scan
+              </button>
             </div>
           </div>
         )}
@@ -925,33 +1152,19 @@ export default function App() {
       {showPicker && (
         <div className="modal-overlay" onClick={() => setShowPicker(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Select a Scan</h2>
-            {scanList.length === 0 ? (
-              <p style={{ color: "var(--text-secondary)" }}>
-                No scans on the server yet. Upload a CT below, or place{" "}
-                <code>.nii</code> / <code>.nii.gz</code> in{" "}
-                <code>web/backend/data/</code> when running locally.
-              </p>
-            ) : (
-              <ul className="scan-list">
-                {scanList.map((s) => (
-                  <li
-                    key={s}
-                    className={s === pickerSelected ? "selected" : ""}
-                    onClick={() => setPickerSelected(s)}
-                    onDoubleClick={() => {
-                      setPickerSelected(s);
-                      setScanFilename(s);
-                      setShowPicker(false);
-                    }}
-                  >
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="modal-actions modal-actions-scan">
-              <label className="btn btn-primary" style={{ cursor: uploadingScan ? "wait" : "pointer" }}>
+            <h2>Load a CT Scan</h2>
+            <p style={{ color: "var(--text-secondary)", marginTop: 0 }}>
+              Upload the NIfTI (.nii / .nii.gz) you want to work on. AWS accepts
+              files up to ~150 MB.
+            </p>
+            <div
+              className="modal-actions modal-actions-scan"
+              style={{ marginBottom: "1rem" }}
+            >
+              <label
+                className="btn btn-primary"
+                style={{ cursor: uploadingScan ? "wait" : "pointer" }}
+              >
                 {uploadingScan ? "Uploading…" : "Upload .nii / .nii.gz"}
                 <input
                   type="file"
@@ -965,6 +1178,62 @@ export default function App() {
                   }}
                 />
               </label>
+            </div>
+            {pickerError && (
+              <p style={{ color: "#f07178", fontSize: "0.9rem" }}>{pickerError}</p>
+            )}
+            {pickerLoading ? (
+              <p style={{ color: "var(--text-secondary)" }}>Loading scan list…</p>
+            ) : scanList.length === 0 ? (
+              <p style={{ color: "var(--text-secondary)" }}>
+                No scans uploaded on this server yet.
+              </p>
+            ) : (
+              <>
+                <p
+                  style={{
+                    color: "var(--text-secondary)",
+                    fontSize: "0.9rem",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Already on this server (click to select, × to remove):
+                </p>
+                <ul className="scan-list">
+                  {scanList.map((s) => (
+                    <li
+                      key={s}
+                      className={s === pickerSelected ? "selected" : ""}
+                      onClick={() => setPickerSelected(s)}
+                      onDoubleClick={() => {
+                        setPickerSelected(s);
+                        setScanFilename(s);
+                        setShowPicker(false);
+                      }}
+                    >
+                      <span style={{ flex: 1 }}>{s}</span>
+                      <button
+                        type="button"
+                        className="btn"
+                        title={`Remove ${s}`}
+                        style={{
+                          padding: "0.15rem 0.45rem",
+                          marginLeft: "0.5rem",
+                          lineHeight: 1,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleScanDelete(s);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <div className="modal-actions modal-actions-scan">
               <button className="btn" onClick={() => setShowPicker(false)}>
                 Cancel
               </button>
@@ -973,7 +1242,7 @@ export default function App() {
                 onClick={confirmScanPick}
                 disabled={!pickerSelected || uploadingScan}
               >
-                Load
+                Load selected
               </button>
             </div>
           </div>

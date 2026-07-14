@@ -1,40 +1,296 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { Line2 } from "three/examples/jsm/lines/Line2.js";
-import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
-import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 const API = process.env.REACT_APP_API_URL || "";
 
-/** Saturated palette aligned with NiiVue LEAD_COLORS (RGB → hex). */
+/**
+ * Pick radius (mm). Slightly under legacy lead radius (3) so tip blobs match
+ * legacy size a bit better while still filling a round contact highlight.
+ */
+const PICK_BALL_MM = 2.0;
+
+/**
+ * Contact pick from the displayed cloud:
+ * - Dense tip (one metal island in the ball): round / half-circle proximity blob.
+ * - Close beads with a visible gap: keep the island under the click; only keep
+ *   both when the click sits near the mid-gap between islands.
+ */
+function selectDisplayedContact(pickMap, seedIndex, spacing, radiusMm = PICK_BALL_MM, iterations = 2) {
+  if (!pickMap?.length || seedIndex < 0 || seedIndex >= pickMap.length) return null;
+  const sx = spacing[0] || 1;
+  const sy = spacing[1] || 1;
+  const sz = spacing[2] || 1;
+  const step = Math.max(sx, sy, sz);
+  const r2 = radiusMm * radiusMm;
+  const seedV = pickMap[seedIndex];
+  let center = seedV.slice();
+  let selectedIdx = [seedIndex];
+
+  // Must be < typical bead gap. 2×spacing was bridging the dual-bead gaps.
+  const linkMm = step * 1.08;
+  const link2 = linkMm * linkMm;
+
+  const indicesInBall = (cx, cy, cz) => {
+    const out = [];
+    for (let i = 0; i < pickMap.length; i++) {
+      const v = pickMap[i];
+      const dx = v[0] * sx - cx;
+      const dy = v[1] * sy - cy;
+      const dz = v[2] * sz - cz;
+      if (dx * dx + dy * dy + dz * dz <= r2) out.push(i);
+    }
+    return out;
+  };
+
+  const mmOf = (i) => {
+    const v = pickMap[i];
+    return [v[0] * sx, v[1] * sy, v[2] * sz];
+  };
+
+  const connectedComponents = (indices) => {
+    if (!indices.length) return [];
+    const set = new Set(indices);
+    const mm = new Map();
+    for (const i of indices) mm.set(i, mmOf(i));
+    const comps = [];
+    const seen = new Set();
+    for (const start of indices) {
+      if (seen.has(start)) continue;
+      const comp = [];
+      const q = [start];
+      seen.add(start);
+      while (q.length) {
+        const i = q.pop();
+        comp.push(i);
+        const [ix, iy, iz] = mm.get(i);
+        for (const j of indices) {
+          if (seen.has(j) || !set.has(j)) continue;
+          const [jx, jy, jz] = mm.get(j);
+          const dx = ix - jx;
+          const dy = iy - jy;
+          const dz = iz - jz;
+          if (dx * dx + dy * dy + dz * dz <= link2) {
+            seen.add(j);
+            q.push(j);
+          }
+        }
+      }
+      comps.push(comp);
+    }
+    return comps;
+  };
+
+  const compCentroidMm = (comp) => {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (const i of comp) {
+      const [mx, my, mz] = mmOf(i);
+      x += mx;
+      y += my;
+      z += mz;
+    }
+    const n = comp.length || 1;
+    return [x / n, y / n, z / n];
+  };
+
+  const dist2Mm = (a, b) => {
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
+    const dz = a[2] - b[2];
+    return dx * dx + dy * dy + dz * dz;
+  };
+
+  /**
+   * Split dual/multi islands inside the ball.
+   * Larger beads: left / mid / right via axis projection + mid-gap.
+   * Tiny fragmented contacts: the empty gap can't be clicked, so treat the
+   * whole local cluster as one contact unless the click is off past an end.
+   */
+  const resolveCloseIslands = (indices, preferredSeed) => {
+    const comps = connectedComponents(indices);
+    if (comps.length <= 1) return indices;
+
+    const clickMm = preferredSeed != null ? mmOf(preferredSeed) : mmOf(indices[0]);
+    const ranked = comps
+      .map((comp) => ({
+        comp,
+        cMm: compCentroidMm(comp),
+        d2: (() => {
+          let best = Infinity;
+          for (const i of comp) best = Math.min(best, dist2Mm(mmOf(i), clickMm));
+          return best;
+        })(),
+      }))
+      .sort((a, b) => a.d2 - b.d2);
+
+    // Order the two nearest islands left→right along their own axis for t.
+    let a = ranked[0];
+    let b = ranked[1];
+    // Stable axis: sort by centroid x then y then z so t meaning is consistent.
+    if (
+      b.cMm[0] < a.cMm[0] - 1e-6 ||
+      (Math.abs(b.cMm[0] - a.cMm[0]) < 1e-6 && b.cMm[1] < a.cMm[1] - 1e-6) ||
+      (Math.abs(b.cMm[0] - a.cMm[0]) < 1e-6 &&
+        Math.abs(b.cMm[1] - a.cMm[1]) < 1e-6 &&
+        b.cMm[2] < a.cMm[2])
+    ) {
+      const tmp = a;
+      a = b;
+      b = tmp;
+    }
+
+    const ab = Math.sqrt(dist2Mm(a.cMm, b.cMm)) || 1e-6;
+    const axis = [
+      (b.cMm[0] - a.cMm[0]) / ab,
+      (b.cMm[1] - a.cMm[1]) / ab,
+      (b.cMm[2] - a.cMm[2]) / ab,
+    ];
+    const t =
+      ((clickMm[0] - a.cMm[0]) * axis[0] +
+        (clickMm[1] - a.cMm[1]) * axis[1] +
+        (clickMm[2] - a.cMm[2]) * axis[2]) /
+      ab;
+
+    const totalPts = comps.reduce((n, c) => n + c.length, 0);
+    const maxIsland = Math.max(...comps.map((c) => c.length));
+    // Weird/separated tiny contact: fragments live inside one contact-sized span.
+    const smallFragmented =
+      ab <= 2.6 && maxIsland <= 14 && totalPts <= 28 && comps.length <= 4;
+
+    if (smallFragmented) {
+      // Off past an end → that side only; otherwise take the whole local section.
+      if (t < -0.12) return a.comp;
+      if (t > 1.12) return b.comp;
+      if (t < 0.1) return a.comp;
+      if (t > 0.9) return b.comp;
+      // Include every nearby island in the ball (not only the nearest two).
+      return indices;
+    }
+
+    const mid = [
+      (a.cMm[0] + b.cMm[0]) * 0.5,
+      (a.cMm[1] + b.cMm[1]) * 0.5,
+      (a.cMm[2] + b.cMm[2]) * 0.5,
+    ];
+    const dA = Math.sqrt(dist2Mm(clickMm, a.cMm));
+    const dB = Math.sqrt(dist2Mm(clickMm, b.cMm));
+    const dMid = Math.sqrt(dist2Mm(clickMm, mid));
+
+    // Larger dual beads: middle zone → both; outer thirds → one side.
+    if (t >= 0.32 && t <= 0.68) return indices;
+    const nearMid = dMid <= Math.max(step * 0.9, ab * 0.22);
+    const balanced = Math.abs(dA - dB) <= step * 0.85;
+    if (nearMid && balanced) return indices;
+
+    if (preferredSeed != null) {
+      const seedComp = comps.find((c) => c.includes(preferredSeed));
+      if (seedComp) return seedComp;
+    }
+
+    return dA <= dB ? a.comp : b.comp;
+  };
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const cx = center[0] * sx;
+    const cy = center[1] * sy;
+    const cz = center[2] * sz;
+    let inBall = indicesInBall(cx, cy, cz);
+    if (!inBall.length) {
+      selectedIdx = [seedIndex];
+      break;
+    }
+    selectedIdx = resolveCloseIslands(inBall, seedIndex);
+    if (!selectedIdx.length) {
+      selectedIdx = [seedIndex];
+      break;
+    }
+    let sxSum = 0;
+    let sySum = 0;
+    let szSum = 0;
+    for (const i of selectedIdx) {
+      sxSum += pickMap[i][0];
+      sySum += pickMap[i][1];
+      szSum += pickMap[i][2];
+    }
+    const n = selectedIdx.length;
+    const mean = [sxSum / n, sySum / n, szSum / n];
+    const bias = 0.45;
+    center = [
+      mean[0] * (1 - bias) + seedV[0] * bias,
+      mean[1] * (1 - bias) + seedV[1] * bias,
+      mean[2] * (1 - bias) + seedV[2] * bias,
+    ];
+  }
+
+  let inBall = indicesInBall(center[0] * sx, center[1] * sy, center[2] * sz);
+  if (!inBall.length) inBall = [seedIndex];
+  selectedIdx = resolveCloseIslands(inBall, seedIndex);
+  if (!selectedIdx.length) selectedIdx = [seedIndex];
+
+  const voxels = selectedIdx.map((i) => [
+    Math.round(pickMap[i][0]),
+    Math.round(pickMap[i][1]),
+    Math.round(pickMap[i][2]),
+  ]);
+  const centroid_voxel = [
+    Math.round(center[0]),
+    Math.round(center[1]),
+    Math.round(center[2]),
+  ];
+  return { voxels, centroid_voxel, count: voxels.length };
+}
+
+/** Live pick highlight color — soft magenta like legacy `_selected` tint. */
+const PICK_COLOR = 0xff66aa;
+
+/** Distinct per-lead colors for submitted contacts. Index 0 (first lead) is green.
+ *  Orange is intentionally excluded so submitted contacts never look like the live pick. */
 const LEAD_PALETTE_HEX = [
-  0xff6363, 0x63c7ff, 0xffc763, 0x95ff63, 0xc763ff, 0x63ffc7, 0xff63c7, 0xffff63,
-  0x6363ff, 0xff953f,
+  0x22ee55, // green
+  0xffd23f, // gold
+  0x3fc7ff, // cyan
+  0xc763ff, // purple
+  0xff63c7, // pink
+  0x63ffc7, // teal
+  0x9b8cff, // periwinkle
+  0xa0e838, // lime
+  0xff5c8a, // rose
+  0x5ce1e6, // aqua
 ];
 
 function leadColorHex(leadName, leads) {
-  const i = Math.max(0, leads.findIndex((l) => l.name === leadName));
-  return LEAD_PALETTE_HEX[i % LEAD_PALETTE_HEX.length];
+  const i = leads.findIndex((l) => l.name === leadName);
+  const idx = i >= 0 ? i : 0;
+  return LEAD_PALETTE_HEX[idx % LEAD_PALETTE_HEX.length];
 }
 
-function leadExpectedContactCount(leadName, leadsList) {
-  const L = leadsList.find((l) => l.name === leadName);
-  if (!L?.dimensions?.length) return 0;
-  const dx = L.dimensions[0] || 1;
-  const dy = L.dimensions[1] || 1;
-  return Math.max(1, dx * dy);
-}
+/** Anatomical label colors matching the desktop tool (R/L red, A/P green, S/I blue). */
+const ORIENT_RED = 0xff4d4d;
+const ORIENT_GREEN = 0x4dd44d;
+const ORIENT_BLUE = 0x4d9bff;
 
-/** Numeric order for labels like LA1, LA12 (first integer in string). */
-function contactLabelSortKey(label) {
-  if (label == null) return NaN;
-  const m = String(label).match(/\d+/);
-  return m ? parseInt(m[0], 10) : NaN;
+/** Colored anatomical label (R/A/S/L/P/I) rendered as a camera-facing sprite. */
+function makeTextSprite(text, colorHex) {
+  const px = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = px;
+  canvas.height = px;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, px, px);
+  ctx.font = "bold 96px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#" + colorHex.toString(16).padStart(6, "0");
+  ctx.fillText(text, px / 2, px / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.renderOrder = 999;
+  return sprite;
 }
-
-/** Pick radius (mm) — matches legacy depth lead radius in config.yml. */
-const PICK_BALL_MM = 3;
 
 export default function ThresholdCloudViewer({
   scanFilename,
@@ -82,6 +338,7 @@ export default function ThresholdCloudViewer({
   const [meta, setMeta] = useState(null);
   const [componentVoxels, setComponentVoxels] = useState(null);
   const [pickBusy, setPickBusy] = useState(false);
+  const [orientation, setOrientation] = useState(null);
 
   const pickBusyRef = useRef(false);
 
@@ -97,7 +354,7 @@ export default function ThresholdCloudViewer({
     if (!scanFilename) return;
     if (!API) {
       setError(
-        "API URL not configured. Set REACT_APP_API_URL on Vercel to your Render URL and redeploy."
+        "API URL not configured. Rebuild the frontend with REACT_APP_API_URL set to the API CloudFront URL."
       );
       return;
     }
@@ -105,24 +362,14 @@ export default function ThresholdCloudViewer({
     setLoading(true);
     setError(null);
     try {
-      // Wake Render free tier (cold start can take 30–60s).
-      await fetch(`${API}/api/health`, { signal: AbortSignal.timeout(90_000) }).catch(
-        () => {}
-      );
+      // Kick volume warm early (fire-and-forget) so rebuilds are fast in RAM.
+      fetch(`${API}/api/scans/${scanFilename}/warm_volume`, {
+        method: "POST",
+        signal: AbortSignal.timeout(10_000),
+      }).catch(() => {});
 
-      const listRes = await fetch(`${API}/api/scans/`, {
-        signal: AbortSignal.timeout(30_000),
-      }).catch(() => null);
-      const serverScans = listRes?.ok ? await listRes.json().catch(() => []) : [];
-      if (!Array.isArray(serverScans) || !serverScans.includes(scanFilename)) {
-        throw new Error(
-          `${scanFilename} is not on the Render server. ` +
-            "Open Load Scan → Upload again (wait 1–2 min). " +
-            "Render wipes files after each redeploy."
-        );
-      }
-
-      // Install bundled cloud cache if available (instant on Render).
+      // Start / fetch cloud cache for this threshold (async on server).
+      setError("Preparing cloud preview…");
       await fetch(`${API}/api/scans/${scanFilename}/warm_cloud`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -130,34 +377,46 @@ export default function ThresholdCloudViewer({
         signal: AbortSignal.timeout(30_000),
       }).catch(() => {});
 
-      // Preload full CT into RAM on AWS (no-op on Render).
-      fetch(`${API}/api/scans/${scanFilename}/warm_volume`, {
-        method: "POST",
-        signal: AbortSignal.timeout(30_000),
-      }).catch(() => {});
-
       let cacheReady = false;
-      for (let attempt = 0; attempt < 12; attempt++) {
+      for (let attempt = 0; attempt < 90; attempt++) {
         const readyRes = await fetch(
           `${API}/api/scans/${scanFilename}/cloud_ready?threshold_pct=${cloudThresholdPct}`,
-          { signal: AbortSignal.timeout(30_000) }
+          { signal: AbortSignal.timeout(15_000) }
         ).catch(() => null);
+        if (readyRes?.status === 404) {
+          throw new Error(
+            `${scanFilename} was not found on the server. Try Load scan again (S3 should restore it after a redeploy).`
+          );
+        }
         if (readyRes?.ok) {
           const readyData = await readyRes.json().catch(() => ({}));
-          if (readyData.error && readyData.error.includes("not found")) {
-            throw new Error(
-              `${scanFilename} is not on the Render server — re-upload via Load Scan.`
-            );
-          }
           if (readyData.ready) {
             cacheReady = true;
             break;
           }
+          setError(
+            `Building cloud at ${cloudThresholdPct}%ile… please wait (${attempt + 1})`
+          );
         }
-        if (attempt === 0) {
-          setError("Preparing cloud preview…");
+        // Also kick threshold_cloud once — if cache missing it returns 202 and starts build.
+        if (attempt === 0 || attempt % 5 === 0) {
+          fetch(`${API}/api/scans/${scanFilename}/threshold_cloud`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              threshold_pct: cloudThresholdPct,
+              max_points: 120000,
+              seed: 0,
+            }),
+            signal: AbortSignal.timeout(20_000),
+          }).catch(() => {});
         }
         await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (!cacheReady) {
+        throw new Error(
+          `Still building the ${cloudThresholdPct}%ile cloud. Wait ~30s and click Refresh cloud — no need to re-upload.`
+        );
       }
       setError(null);
 
@@ -166,24 +425,28 @@ export default function ThresholdCloudViewer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           threshold_pct: cloudThresholdPct,
-          max_points: 400000,
+          max_points: 120000,
           seed: 0,
         }),
-        signal: AbortSignal.timeout(cacheReady ? 60_000 : 300_000),
+        signal: AbortSignal.timeout(90_000),
       });
+      if (res.status === 202) {
+        throw new Error(
+          `Cloud at ${cloudThresholdPct}%ile is still building. Click Refresh cloud in a moment.`
+        );
+      }
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         const msg = errBody.error || errBody.message;
         if (res.status === 404) {
           throw new Error(
             msg ||
-              `Scan not on server — re-upload ${scanFilename} via Load Scan (Render does not keep files across redeploys).`
+              `${scanFilename} not found — open Load scan and select it again.`
           );
         }
         if (res.status === 502 || res.status === 503) {
           throw new Error(
-            "API overloaded or still deploying — wait 1–2 minutes, open /api/health, then Refresh cloud. " +
-              "First cloud load can take 2–3 minutes on the free tier."
+            "API is busy or still deploying — wait a minute, then Refresh cloud."
           );
         }
         throw new Error(msg || `threshold_cloud HTTP ${res.status}`);
@@ -209,14 +472,13 @@ export default function ThresholdCloudViewer({
       const msg = e?.message || String(e);
       if (msg === "Failed to fetch" || e?.name === "TimeoutError") {
         setError(
-          "Cloud request timed out or could not reach the API. " +
-            "Open https://voxtool-api.onrender.com/api/health in a tab, wait until it responds, " +
-            "then click Refresh cloud. Also re-upload the scan if you redeployed Render."
+          "Cloud is still building or the request timed out. " +
+            "Wait ~30s and click Refresh cloud — you do not need to re-upload."
         );
       } else {
         setError(msg);
       }
-      rebuildPoints([], spacingRef.current || [1, 1, 1]);
+      // Keep any existing points on screen instead of wiping to empty on timeout.
     } finally {
       setLoading(false);
     }
@@ -258,7 +520,7 @@ export default function ThresholdCloudViewer({
 
     const mat = new THREE.PointsMaterial({
       color: 0xc8d4e0,
-      size: Math.max(sx, sy, sz) * 2.5,
+      size: Math.max(sx, sy, sz) * 1.5,
       sizeAttenuation: true,
       transparent: true,
       opacity: 0.85,
@@ -375,68 +637,50 @@ export default function ThresholdCloudViewer({
 
       const ix = pickBestVoxelIndex(ptsObj, pickMap);
       if (ix === null || ix < 0 || ix >= pickMap.length) return;
-      const seedVoxel = pickMap[ix];
+
+      const spacing = spacingRef.current || meta?.spacing || [1, 1, 1];
+      const local = selectDisplayedContact(pickMap, ix, spacing, PICK_BALL_MM, 2);
+      if (!local?.voxels?.length) {
+        setError("Could not snap to contact — click directly on a bright voxel.");
+        return;
+      }
+
+      // Immediate visual parity with legacy: only the connected local cluster.
+      setComponentVoxels(local.voxels);
+      setError(null);
 
       if (pickAbortRef.current) pickAbortRef.current.abort();
       const ac = new AbortController();
       pickAbortRef.current = ac;
-
       const gen = ++pickGenerationRef.current;
       setPickBusy(true);
-      setError(null);
 
       (async () => {
-        const timeoutId = setTimeout(() => ac.abort(), 120_000);
+        const timeoutId = setTimeout(() => ac.abort(), 30_000);
         try {
-          const body = {
-            seed_voxel: seedVoxel,
-            threshold_pct: cloudThresholdPctRef.current,
-            max_voxels: 12000,
-            max_ball_mm: PICK_BALL_MM,
-          };
-          if (cloudThrRef.current != null) {
-            body.intensity_threshold = cloudThrRef.current;
-          }
-
-          const res = await fetch(`${API}/api/scans/${fname}/bright_component`, {
+          const res = await fetch(`${API}/api/scans/${fname}/voxel_to_mm`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ voxel: local.centroid_voxel }),
             signal: ac.signal,
           });
-          const data = await res.json();
+          const data = await res.json().catch(() => ({}));
           if (gen !== pickGenerationRef.current) return;
-
-          if (data.success && Array.isArray(data.voxels) && data.centroid_voxel && data.centroid_mm) {
-            setComponentVoxels(data.voxels);
-            onCloudPickRef.current({
-              centroid_voxel: data.centroid_voxel,
-              centroid_mm: data.centroid_mm,
-              count: data.count ?? data.voxels.length,
-              capped: !!data.capped,
-              seed_voxel: seedVoxel,
-            });
-          } else {
-            setComponentVoxels(null);
-            setError(
-              data.error?.includes("not found")
-                ? "Scan gone from Render (server restarted). Load Scan → Upload again, then Refresh cloud."
-                : data.message ||
-                    data.error ||
-                    "Could not snap to contact — click directly on a bright voxel."
-            );
+          if (!res.ok || !data.mm) {
+            throw new Error(data.error || `voxel_to_mm HTTP ${res.status}`);
           }
+          onCloudPickRef.current({
+            centroid_voxel: local.centroid_voxel,
+            centroid_mm: data.mm,
+            count: local.count,
+            capped: false,
+            seed_voxel: pickMap[ix],
+          });
         } catch (err) {
           if (err?.name === "AbortError") return;
-          console.error("bright_component:", err);
+          console.error("pick voxel_to_mm:", err);
           if (gen !== pickGenerationRef.current) return;
-          setComponentVoxels(null);
-          const msg = err?.message || String(err);
-          setError(
-            msg === "Failed to fetch"
-              ? "Pick could not reach the API (Render may have restarted). Re-upload the scan, Refresh cloud, try again."
-              : `Pick failed: ${msg}`
-          );
+          setError(`Pick failed: ${err.message || err}`);
         } finally {
           clearTimeout(timeoutId);
           if (gen === pickGenerationRef.current) setPickBusy(false);
@@ -502,6 +746,14 @@ export default function ThresholdCloudViewer({
       };
       disposeGroupByName("contact-markers");
       disposeGroupByName("lead-polylines");
+      const labels = scene.getObjectByName("orientation-labels");
+      if (labels) {
+        labels.children.forEach((ch) => {
+          if (ch.material?.map) ch.material.map.dispose();
+          if (ch.material) ch.material.dispose();
+        });
+        scene.remove(labels);
+      }
       fatLineMaterialsRef.current = [];
       sceneRef.current = null;
       cameraRef.current = null;
@@ -514,9 +766,80 @@ export default function ThresholdCloudViewer({
     fetchCloud();
   }, [fetchCloud]);
 
+  // Anatomical axis directions (R/A/S/L/P/I) for orientation labels.
+  useEffect(() => {
+    if (!scanFilename || !API) {
+      setOrientation(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`${API}/api/scans/${scanFilename}/orientation`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d && Array.isArray(d.R)) setOrientation(d);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [scanFilename]);
+
   useEffect(() => {
     if (!pendingContact) setComponentVoxels(null);
   }, [pendingContact]);
+
+  // Orientation labels: colored R/A/S/L/P/I sprites at the cloud's extremes.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const disposeLabels = () => {
+      const g = scene.getObjectByName("orientation-labels");
+      if (!g) return;
+      g.children.forEach((ch) => {
+        if (ch.material?.map) ch.material.map.dispose();
+        if (ch.material) ch.material.dispose();
+      });
+      scene.remove(g);
+    };
+    disposeLabels();
+
+    const pts = pointsRef.current;
+    if (!orientation || !pts) return;
+
+    const box = new THREE.Box3().setFromBufferAttribute(pts.geometry.attributes.position);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const radius = box.getSize(new THREE.Vector3()).length() * 0.5;
+    if (!Number.isFinite(radius) || radius <= 0) return;
+    const off = radius * 1.18;
+    const labelScale = Math.max(radius * 0.16, 6);
+
+    const group = new THREE.Group();
+    group.name = "orientation-labels";
+    const defs = [
+      ["R", orientation.R, ORIENT_RED],
+      ["L", orientation.L, ORIENT_RED],
+      ["A", orientation.A, ORIENT_GREEN],
+      ["P", orientation.P, ORIENT_GREEN],
+      ["S", orientation.S, ORIENT_BLUE],
+      ["I", orientation.I, ORIENT_BLUE],
+    ];
+    for (const [txt, dir, col] of defs) {
+      if (!Array.isArray(dir) || dir.length !== 3) continue;
+      const sp = makeTextSprite(txt, col);
+      sp.position.set(
+        center.x + dir[0] * off,
+        center.y + dir[1] * off,
+        center.z + dir[2] * off
+      );
+      sp.scale.set(labelScale, labelScale, 1);
+      group.add(sp);
+    }
+    scene.add(group);
+
+    return disposeLabels;
+  }, [orientation, meta]);
 
   // Orange highlight: 26-connected bright blob for current cloud pick
   useEffect(() => {
@@ -549,11 +872,11 @@ export default function ThresholdCloudViewer({
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
     const mat = new THREE.PointsMaterial({
-      color: 0xff8822,
-      size: Math.max(sx, sy, sz) * 2.9,
+      color: PICK_COLOR,
+      size: Math.max(sx, sy, sz) * 1.35,
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.72,
     });
 
     const hi = new THREE.Points(geom, mat);
@@ -561,7 +884,9 @@ export default function ThresholdCloudViewer({
     scene.add(hi);
   }, [componentVoxels, meta]);
 
-  // Contact markers (voxel space) + lead polylines (LA1→LA2→…)
+  // Contact markers: color the bright blob around each submitted contact in its
+  // lead color (legacy style). The live pick's blob stays orange via the
+  // component-highlight effect. No connecting polyline.
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
@@ -579,119 +904,92 @@ export default function ThresholdCloudViewer({
     disposeGroupByName("contact-markers");
     disposeGroupByName("lead-polylines");
 
-    const spacing = meta?.spacing || [1, 1, 1];
+    const spacing = meta?.spacing || spacingRef.current || [1, 1, 1];
     const sx = spacing[0] || 1;
     const sy = spacing[1] || 1;
     const sz = spacing[2] || 1;
     const group = new THREE.Group();
     group.name = "contact-markers";
 
-    const wrapEl = wrapRef.current;
-    const resW = wrapEl?.clientWidth || 800;
-    const resH = Math.max(wrapEl?.clientHeight || 600, 1);
-    const lineResolution = new THREE.Vector2(resW, resH);
+    // Radius (mm) matches legacy lead radius (config.yml D/G = 3).
+    const radiusMm = PICK_BALL_MM;
 
-    const leadStrength = (leadName) => {
-      const expected = leadExpectedContactCount(leadName, leads);
-      const marked = contacts.filter((x) => x.lead === leadName).length;
-      const complete = expected > 0 && marked >= expected;
-      const selected = selectedLead === leadName;
-      return { complete, selected, expected, marked };
+    // Cloud voxel coordinates (i,j,k) available for blob coloring.
+    const pickMap = pickIndexToVoxelRef.current;
+
+    // Color only the local connected contact cluster (same logic as live pick).
+    const colorBlobFromCloud = (voxel, colorHex, positions, colors) => {
+      if (!pickMap || !voxel || voxel.length !== 3) return 0;
+      let seedIndex = 0;
+      let bestD = Infinity;
+      for (let i = 0; i < pickMap.length; i++) {
+        const v = pickMap[i];
+        const d =
+          (v[0] - voxel[0]) ** 2 +
+          (v[1] - voxel[1]) ** 2 +
+          (v[2] - voxel[2]) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          seedIndex = i;
+        }
+      }
+      const local = selectDisplayedContact(
+        pickMap,
+        seedIndex,
+        [sx, sy, sz],
+        radiusMm,
+        2
+      );
+      if (!local?.voxels?.length) return 0;
+      const col = new THREE.Color(colorHex);
+      for (const v of local.voxels) {
+        positions.push(v[0] * sx, v[1] * sy, v[2] * sz);
+        colors.push(col.r, col.g, col.b);
+      }
+      return local.voxels.length;
     };
 
-    const addSphere = (voxel, colorHex, scale = 4, opacity = 1) => {
+    // Fallback solid marker when a contact has no nearby cloud voxels (e.g. an
+    // interpolated point landing in a sparse region) so it's still visible.
+    const addFallbackBlock = (voxel, colorHex) => {
       if (!voxel || voxel.length !== 3) return;
-      const [vi, vj, vk] = voxel;
-      const geom = new THREE.SphereGeometry(Math.max(sx, sy, sz) * scale * 0.15, 12, 12);
-      const mat = new THREE.MeshBasicMaterial({
-        color: colorHex,
-        transparent: opacity < 0.999,
-        opacity,
-        depthTest: true,
-      });
+      const geom = new THREE.BoxGeometry(sx * 1.8, sy * 1.8, sz * 1.8);
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex, depthTest: true });
       const mesh = new THREE.Mesh(geom, mat);
-      mesh.position.set(vi * sx, vj * sy, vk * sz);
+      mesh.position.set(voxel[0] * sx, voxel[1] * sy, voxel[2] * sz);
       group.add(mesh);
     };
 
+    const positions = [];
+    const colors = [];
     contacts.forEach((c) => {
       if (!c.voxel) return;
-      const hex = leadColorHex(c.lead, leads);
-      const { complete, selected } = leadStrength(c.lead);
-      const opacity = selected ? 1 : complete ? 0.95 : 0.62;
-      const scale = selected ? 3.35 : complete ? 3 : 2.75;
-      addSphere(c.voxel, hex, scale, opacity);
+      const hex = leadColorHex(c.lead, leads || []);
+      const n = colorBlobFromCloud(c.voxel, hex, positions, colors);
+      if (n === 0) addFallbackBlock(c.voxel, hex);
     });
 
-    if (pendingContact?.voxel && pendingContact.lead === selectedLead) {
-      addSphere(pendingContact.voxel, 0xffdd44, 3.5);
-    }
-
-    const lineGroup = new THREE.Group();
-    lineGroup.name = "lead-polylines";
-
-    const byLead = new Map();
-    contacts.forEach((c) => {
-      if (!c.voxel || c.voxel.length !== 3) return;
-      const n = contactLabelSortKey(c.label);
-      if (!Number.isFinite(n)) return;
-      if (!byLead.has(c.lead)) byLead.set(c.lead, []);
-      byLead.get(c.lead).push({ c, n });
-    });
-
-    const addFatPolyline = (flatXYZ, colorHex, lineWidthPx, opacity) => {
-      const lg = new LineGeometry();
-      lg.setPositions(flatXYZ);
-      const mat = new LineMaterial({
-        color: colorHex,
-        linewidth: lineWidthPx,
-        transparent: true,
-        opacity,
-        resolution: lineResolution.clone(),
-        depthTest: true,
+    if (positions.length) {
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute(
+        "position",
+        new THREE.BufferAttribute(new Float32Array(positions), 3)
+      );
+      geom.setAttribute(
+        "color",
+        new THREE.BufferAttribute(new Float32Array(colors), 3)
+      );
+      const mat = new THREE.PointsMaterial({
+        size: Math.max(sx, sy, sz) * 1.55,
+        sizeAttenuation: true,
+        vertexColors: true,
       });
-      fatLineMaterialsRef.current.push(mat);
-      const line = new Line2(lg, mat);
-      line.computeLineDistances();
-      lineGroup.add(line);
-    };
-
-    for (const [leadName, arr] of byLead) {
-      arr.sort((a, b) => a.n - b.n);
-      const sorted = arr.map((x) => x.c);
-      if (sorted.length < 2) continue;
-
-      const flat = [];
-      for (const c of sorted) {
-        const [vi, vj, vk] = c.voxel;
-        flat.push(vi * sx, vj * sy, vk * sz);
-      }
-
-      const { complete, selected } = leadStrength(leadName);
-      const hex = leadColorHex(leadName, leads);
-      const widthPx = selected ? 5 : complete ? 4 : 3;
-      const opacity = selected ? 1 : complete ? 0.94 : 0.72;
-      addFatPolyline(flat, hex, widthPx, opacity);
-
-      // Stub from last committed contact on this lead to pending (same lead selected).
-      if (
-        pendingContact?.voxel?.length === 3 &&
-        pendingContact.lead === leadName &&
-        selectedLead === leadName
-      ) {
-        const last = sorted[sorted.length - 1];
-        const [vi, vj, vk] = last.voxel;
-        const [pi, pj, pk] = pendingContact.voxel;
-        addFatPolyline(
-          [vi * sx, vj * sy, vk * sz, pi * sx, pj * sy, pk * sz],
-          0xffdd44,
-          Math.max(3, widthPx - 0.5),
-          0.82
-        );
-      }
+      const pts = new THREE.Points(geom, mat);
+      pts.renderOrder = 2;
+      group.add(pts);
     }
 
-    scene.add(lineGroup);
+    // Live pending pick is drawn by component-highlight (same density as cloud).
     scene.add(group);
   }, [contacts, pendingContact, selectedLead, leads, meta]);
 
@@ -712,7 +1010,7 @@ export default function ThresholdCloudViewer({
       {error && <div className="cloud-error">{error}</div>}
       <div className="cloud-hint muted">
         {selectedLead
-          ? "Click an electrode contact — orange blob + yellow centroid. First click on cloud may take ~30s."
+          ? "Click a contact → orange, Submit → lead color. Re-submit same # to replace. First click may take ~30s."
           : "Select a lead in the sidebar, then click the cloud."}
       </div>
       <div ref={wrapRef} className="cloud-canvas-wrap" />

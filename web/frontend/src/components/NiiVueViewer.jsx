@@ -241,15 +241,35 @@ export default function NiiVueViewer({
     if (!scanFilename || !nvRef.current) return;
     const nv = nvRef.current;
     const url = `${API}/api/scans/${scanFilename}`;
-    nv.loadVolumes([{ url, colormap: "ct_skull" }]).then(() => {
-      nv.setVolumeRenderIllumination(0.4);
+    // Use "gray" (not ct_skull): ct_skull bakes fixed HU min/max into the
+    // colormap, which made Bone/Soft/Electrodes/sliders look like no-ops.
+    nv.loadVolumes([
+      {
+        url,
+        colormap: "gray",
+        cal_min: calMin,
+        cal_max: calMax,
+      },
+    ]).then(() => {
+      // Matte volume (0): real volume look, cheaper than gradient lighting (0.4).
+      // Do NOT use negative values — that switches to the "cube split" slice shader.
+      nv.setVolumeRenderIllumination(0);
       nv.setRenderAzimuthElevation(120, 10);
-      nv.volScaleMultiplier = 1.4;
+      nv.volScaleMultiplier = 1.0;
       nv.setSliceMM(true);
       nv.setMeshThicknessOn2D(Infinity);
       nv.setClipPlaneThick(0.7);
-      nv.drawScene?.();
+      if (nv.volumes?.[0]) {
+        nv.volumes[0].cal_min = calMin;
+        nv.volumes[0].cal_max = calMax;
+        nv.updateGLVolume();
+      } else {
+        nv.drawScene?.();
+      }
     });
+    // Intentionally omit calMin/calMax from deps — window changes are handled
+    // by the intensity effect below so we don't reload the whole volume.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanFilename]);
 
   // Layout: switch which slice(s) NiiVue draws, and whether the 3D render
@@ -264,15 +284,21 @@ export default function NiiVueViewer({
     nv.drawScene?.();
   }, [layout]);
 
-  // Intensity window — debounced so slider drags stay responsive.
+  // Intensity window — Bone/Soft/Electrodes/Auto + Min/Max sliders.
   useEffect(() => {
     const nv = nvRef.current;
     if (!nv || !nv.volumes || nv.volumes.length === 0) return;
     const t = setTimeout(() => {
-      nv.volumes[0].cal_min = calMin;
-      nv.volumes[0].cal_max = calMax;
+      const vol = nv.volumes[0];
+      if (!vol) return;
+      vol.cal_min = calMin;
+      vol.cal_max = calMax;
+      if (vol.hdr) {
+        vol.hdr.cal_min = calMin;
+        vol.hdr.cal_max = calMax;
+      }
       nv.updateGLVolume();
-    }, 80);
+    }, 50);
     return () => clearTimeout(t);
   }, [calMin, calMax]);
 

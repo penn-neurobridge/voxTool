@@ -1,4 +1,4 @@
-"""Build threshold-cloud JSON cache (run as a detached subprocess on Render)."""
+"""Build threshold-cloud JSON cache (run as a detached subprocess)."""
 import os
 import sys
 import time
@@ -7,6 +7,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
 from app import create_app  # noqa: E402
+from ct_cache import get_volume  # noqa: E402
 from routes.scans import _cloud_cache_path, _write_threshold_cloud_cache  # noqa: E402
 
 
@@ -41,6 +42,12 @@ def main() -> int:
     app = create_app()
     try:
         with app.app_context():
+            # Load CT into RAM first when enabled — builds are much faster.
+            if os.environ.get("ENABLE_VOLUME_WARM", "").lower() in ("1", "true", "yes"):
+                try:
+                    get_volume(filepath)
+                except Exception as exc:
+                    print(f"volume warm failed (continuing): {exc}", file=sys.stderr)
             _write_threshold_cloud_cache(filepath, threshold_pct)
     finally:
         try:

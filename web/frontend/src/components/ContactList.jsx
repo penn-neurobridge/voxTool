@@ -4,6 +4,11 @@ export default function ContactList({ contacts, leads, onDelete }) {
     return i >= 0 ? i + 1 : 0;
   };
 
+  const contactNumber = (label) => {
+    const m = String(label).match(/\d+/);
+    return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
+  };
+
   if (contacts.length === 0) {
     return (
       <div className="contact-list-empty muted">
@@ -12,9 +17,21 @@ export default function ContactList({ contacts, leads, onDelete }) {
     );
   }
 
+  // Display sorted by lead order, then contact number, while keeping each row's
+  // original index so deletion still targets the right entry.
+  const ordered = contacts
+    .map((c, origIdx) => ({ c, origIdx }))
+    .sort((a, b) => {
+      const lo = leadOrdinal(a.c.lead) - leadOrdinal(b.c.lead);
+      if (lo !== 0) return lo;
+      if (a.c.lead !== b.c.lead) return a.c.lead < b.c.lead ? -1 : 1;
+      return contactNumber(a.c.label) - contactNumber(b.c.label);
+    });
+
   return (
     <ul className="contact-list contact-list-dense">
-      {contacts.map((c, idx) => {
+      {ordered.map(({ c, origIdx }) => {
+        const idx = origIdx;
         const lo = leadOrdinal(c.lead);
         const lbl = parseInt(c.label, 10);
         const labelNum = Number.isNaN(lbl) ? c.label : lbl;

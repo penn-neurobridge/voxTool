@@ -12,8 +12,23 @@ from flask import Blueprint, send_from_directory, jsonify, current_app, request
 
 from ct_cache import get_volume, volume_is_cached, warm_volume
 from legacy_interpolator import interpolate_between_endpoints, lead_radius_mm
+from scan_store import (
+    delete_scan as s3_delete_scan,
+    ensure_cloud_cache,
+    ensure_local,
+    list_remote_scans,
+    put_cloud_cache,
+    put_scan,
+    s3_enabled,
+)
 
 scans_bp = Blueprint("scans", __name__)
+
+
+def _scan_filepath(filename: str) -> str | None:
+    """Local path for a scan, downloading from S3 when needed."""
+    data_dir = current_app.config["DATA_DIR"]
+    return ensure_local(os.path.basename(filename or ""), data_dir)
 
 
 def _volume_warm_enabled() -> bool:
@@ -203,10 +218,11 @@ def _resample_polyline_mm(path_mm: np.ndarray, t_values: list) -> list:
 @scans_bp.route("/<filename>", methods=["GET"])
 def get_scan(filename):
     data_dir = current_app.config["DATA_DIR"]
-    if not os.path.isfile(os.path.join(data_dir, filename)):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
     return send_from_directory(
-        data_dir, filename, mimetype="application/octet-stream"
+        data_dir, os.path.basename(filepath), mimetype="application/octet-stream"
     )
 
 
@@ -214,17 +230,22 @@ def get_scan(filename):
 def list_scans():
     data_dir = current_app.config["DATA_DIR"]
     valid_ext = (".nii", ".nii.gz")
-    files = [
+    local = {
         f
         for f in os.listdir(data_dir)
         if any(f.endswith(ext) for ext in valid_ext)
-    ]
+    }
+    remote = list_remote_scans()
+    if remote is not None:
+        files = sorted(local | set(remote))
+    else:
+        files = sorted(local)
     return jsonify(files)
 
 
 @scans_bp.route("/upload", methods=["POST"])
 def upload_scan():
-    """Upload a NIfTI volume into the server data directory (for cloud deploys)."""
+    """Upload a NIfTI volume into the server data directory (and S3 when configured)."""
     data_dir = current_app.config["DATA_DIR"]
     upload = request.files.get("file")
     if upload is None or not upload.filename:
@@ -241,6 +262,16 @@ def upload_scan():
     upload.save(dest)
     size_mb = os.path.getsize(dest) / (1024 * 1024)
 
+    # Persist so EB redeploys do not wipe the scan.
+    s3_ok = put_scan(dest, name)
+    if s3_enabled() and not s3_ok:
+        return jsonify(
+            {
+                "success": False,
+                "error": "Saved on instance but failed to persist to S3 — try again.",
+            }
+        ), 500
+
     cloud_ready = _install_bundled_cloud_cache(dest, 99.96)
     if not cloud_ready:
         _warm_cloud_cache_async(dest, 99.96)
@@ -254,16 +285,50 @@ def upload_scan():
             "size_mb": round(size_mb, 1),
             "cloud_ready": cloud_ready,
             "cloud_warming": not cloud_ready,
+            "persisted": s3_enabled(),
         }
     )
+
+
+@scans_bp.route("/<filename>", methods=["DELETE"])
+def delete_scan(filename):
+    """Remove an uploaded NIfTI (local + S3) and side-car cloud cache files."""
+    data_dir = current_app.config["DATA_DIR"]
+    name = os.path.basename(filename or "")
+    lower = name.lower()
+    if not (lower.endswith(".nii") or lower.endswith(".nii.gz")):
+        return jsonify({"success": False, "error": "invalid filename"}), 400
+
+    path = _scan_filepath(name)
+    remote = list_remote_scans() or []
+    if not path and name not in remote:
+        return jsonify({"success": False, "error": f"Scan '{name}' not found"}), 404
+
+    # Clear associated cache / log sidecars so they don't linger.
+    if path:
+        for suffix in (
+            ".cloud_99.9600.json",
+            ".cloud_99.9600.json.log",
+            ".cloud_99.5.json",
+            ".cloud_99.5.json.log",
+        ):
+            side = path + suffix
+            if os.path.isfile(side):
+                try:
+                    os.remove(side)
+                except OSError:
+                    pass
+
+    s3_delete_scan(name, data_dir)
+    return jsonify({"success": True, "filename": name})
 
 
 @scans_bp.route("/<filename>/range", methods=["GET"])
 def intensity_range(filename):
     """Return p1/p99 percentile intensity range for the Auto windowing preset."""
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
     vol = get_volume(filepath)
     p1, p99 = np.percentile(vol.data, [1, 99])
@@ -286,8 +351,8 @@ def snap(filename):
     Returns: { center_mm: [r, a, s], voxel_count: N, success: bool }
     """
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True)
@@ -417,9 +482,11 @@ def _bundled_cloud_cache_path(filename: str, threshold_pct: float) -> str:
 
 
 def _install_bundled_cloud_cache(filepath: str, threshold_pct: float = 99.96) -> bool:
-    """Copy a pre-built cloud JSON shipped with the repo (instant on Render)."""
+    """Use local / S3 / bundled cloud JSON if available (instant cloud load)."""
     cache_path = _cloud_cache_path(filepath, threshold_pct)
     if os.path.isfile(cache_path):
+        return True
+    if ensure_cloud_cache(cache_path):
         return True
 
     bundled = _bundled_cloud_cache_path(os.path.basename(filepath), threshold_pct)
@@ -432,6 +499,7 @@ def _install_bundled_cloud_cache(filepath: str, threshold_pct: float = 99.96) ->
         os.remove(lock_path)
     except OSError:
         pass
+    put_cloud_cache(cache_path)
     return True
 
 
@@ -553,6 +621,52 @@ def _build_threshold_cloud_payload(
     seed: int = 0,
     excluded: list | None = None,
 ) -> dict:
+    # Prefer in-RAM volume when warmed — much faster than per-slab NIfTI reads.
+    if volume_is_cached(filepath):
+        vol = get_volume(filepath)
+        data = vol.data
+        affine = vol.affine.astype(np.float64)
+        shape = [int(x) for x in data.shape[:3]]
+        flat = data.ravel()
+        rng = np.random.default_rng(seed)
+        if flat.size > 2_000_000:
+            sample = flat[rng.choice(flat.size, size=2_000_000, replace=False)]
+            thr = float(np.percentile(sample, threshold_pct))
+        else:
+            thr = float(np.percentile(flat, threshold_pct))
+        mask = data >= thr
+        if excluded:
+            ex = _excluded_set(excluded)
+            for i, j, k in ex:
+                if 0 <= i < shape[0] and 0 <= j < shape[1] and 0 <= k < shape[2]:
+                    mask[i, j, k] = False
+        idx = np.column_stack(np.where(mask)).astype(np.int32)
+        total = int(idx.shape[0])
+        if total == 0:
+            return {
+                "success": True,
+                "points": [],
+                "intensity_threshold": thr,
+                "threshold_pct": threshold_pct,
+                "total_voxels": 0,
+                "returned": 0,
+                "shape": shape,
+                "voxel_spacing_mm": _voxel_spacing_mm(affine),
+            }
+        if total > max_points:
+            pick = rng.choice(total, size=max_points, replace=False)
+            idx = idx[pick]
+        return {
+            "success": True,
+            "points": idx.tolist(),
+            "intensity_threshold": thr,
+            "threshold_pct": threshold_pct,
+            "total_voxels": total,
+            "returned": int(idx.shape[0]),
+            "shape": shape,
+            "voxel_spacing_mm": _voxel_spacing_mm(affine),
+        }
+
     import nibabel as nib
 
     img = nib.load(filepath)
@@ -602,6 +716,7 @@ def _write_threshold_cloud_cache(filepath: str, threshold_pct: float) -> dict:
     cache_path = _cloud_cache_path(filepath, threshold_pct)
     with open(cache_path, "w", encoding="utf-8") as f:
         json.dump(payload, f)
+    put_cloud_cache(cache_path)
     return payload
 
 
@@ -629,8 +744,8 @@ def _warm_cloud_cache_async(filepath: str, threshold_pct: float = 99.96) -> None
 @scans_bp.route("/<filename>/warm_cloud", methods=["POST"])
 def warm_cloud(filename):
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(silent=True) or {}
@@ -655,8 +770,8 @@ def warm_cloud(filename):
 @scans_bp.route("/<filename>/cloud_ready", methods=["GET"])
 def cloud_ready(filename):
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"ready": False, "error": f"Scan '{filename}' not found"}), 404
 
     threshold_pct = float(request.args.get("threshold_pct", 99.96))
@@ -688,8 +803,8 @@ def threshold_cloud(filename):
     }
     """
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True) or {}
@@ -717,15 +832,28 @@ def threshold_cloud(filename):
         payload["returned"] = len(points)
         return jsonify(payload)
 
+    # Never block HTTP for minutes building a new threshold — CloudFront dies at ~60s.
+    # Kick async build (+ volume warm) and tell the client to poll cloud_ready.
+    if not excluded:
+        if _volume_warm_enabled():
+            _warm_volume_async(filepath)
+        _warm_cloud_cache_async(filepath, threshold_pct)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "building": True,
+                    "ready": False,
+                    "threshold_pct": threshold_pct,
+                    "message": "Cloud cache is building — poll cloud_ready then retry.",
+                }
+            ),
+            202,
+        )
+
     payload = _build_threshold_cloud_payload(
         filepath, threshold_pct, max_points=max_points, seed=seed, excluded=excluded
     )
-    if not excluded:
-        try:
-            with open(cache_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f)
-        except OSError:
-            current_app.logger.exception("failed to write threshold cloud cache")
     return jsonify(payload)
 
 
@@ -733,8 +861,8 @@ def threshold_cloud(filename):
 def warm_volume_route(filename):
     """Preload float32 CT into worker RAM when ENABLE_VOLUME_WARM is set (AWS EB)."""
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     if not _volume_warm_enabled():
@@ -750,8 +878,8 @@ def warm_volume_route(filename):
 @scans_bp.route("/<filename>/volume_ready", methods=["GET"])
 def volume_ready_route(filename):
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"ready": False, "error": f"Scan '{filename}' not found"}), 404
 
     return jsonify({"ready": volume_is_cached(filepath)})
@@ -759,22 +887,26 @@ def volume_ready_route(filename):
 
 @scans_bp.route("/<filename>/bright_component", methods=["POST"])
 def bright_component(filename):
-    """26-connected bright-voxel blob containing seed (same threshold rule as threshold_cloud).
+    """Legacy-style contact pick: sphere on the threshold *point cloud*.
 
     Body: {
       seed_voxel: [i,j,k],
       threshold_pct: float,
       excluded_voxels?: [[i,j,k], ...],
       max_voxels?: int (default 12000, safety cap),
-      max_ball_mm?: float (default 6, 0 = no limit; Euclidean cap from seed keeps one contact)
+      max_ball_mm?: float (default 3) — lead radius in mm (config.yml D/G=3, S=5),
+      selection_iterations?: int (default 2) — config.yml selection_iterations
     }
-    Returns centroid voxel (integer, clipped) and all component voxels for highlighting.
-    """
-    from collections import deque
 
+    Mirrors desktop select_points_near + center_selection: take only
+    super-threshold cloud points inside a Euclidean ball and recenter a few
+    times. That gives compact, consistent contact-sized blobs — denser than a
+    single voxel, but much smaller than selecting every bright *volume* voxel
+    inside the same radius (which looked too big on AWS).
+    """
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True) or {}
@@ -782,74 +914,103 @@ def bright_component(filename):
     if not seed or len(seed) != 3:
         return jsonify({"success": False, "error": "seed_voxel [i,j,k] required"}), 400
 
-    threshold_pct = float(body.get("threshold_pct", 99.5))
+    threshold_pct = float(body.get("threshold_pct", 99.96))
     max_voxels = int(body.get("max_voxels", 12_000))
     excluded = body.get("excluded_voxels") or []
-    max_ball_mm = float(body.get("max_ball_mm", 6.0))
+    # Legacy depth/grid default is 3 mm (config.yml), not 6.
+    max_ball_mm = float(body.get("max_ball_mm", 3.0))
+    selection_iterations = int(body.get("selection_iterations", 2))
 
     if not (0 < threshold_pct <= 100):
         return jsonify({"success": False, "error": "threshold_pct must be in (0, 100]"}), 400
 
-    vox = _VoxelAccess(filepath)
-    affine = vox.affine
-    shape = vox.shape
+    _, affine, shape = _open_scan_dataobj(filepath)
     si, sj, sk = int(seed[0]), int(seed[1]), int(seed[2])
     if not (0 <= si < shape[0] and 0 <= sj < shape[1] and 0 <= sk < shape[2]):
         return jsonify({"success": False, "error": "seed_voxel out of bounds"}), 400
 
     thr = _threshold_for_pick(filepath, threshold_pct, body)
-    if vox.value(si, sj, sk) < thr:
-        return jsonify(
-            {
-                "success": False,
-                "error": "seed_below_threshold",
-                "message": "Clicked voxel is below this percentile (try a lower cloud %ile).",
-            }
-        ), 400
-
     ex_set = _excluded_set(excluded)
-
     M = affine[:3, :3]
+    radius_mm = max_ball_mm if max_ball_mm > 0 else 3.0
+    r_sq = radius_mm * radius_mm
 
-    def offset_sq_mm(di: int, dj: int, dk: int) -> float:
-        v = M @ np.array([di, dj, dk], dtype=np.float64)
-        return float(np.dot(v, v))
+    # Prefer the threshold point cloud (legacy CT point cloud). Fall back to a
+    # local volume search only when the cloud isn't available yet.
+    _install_bundled_cloud_cache(filepath, threshold_pct)
+    cache_path = _cloud_cache_path(filepath, threshold_pct)
+    cand = None
+    source = "volume"
+    if os.path.isfile(cache_path):
+        try:
+            with open(cache_path, encoding="utf-8") as f:
+                pts = json.load(f).get("points") or []
+            if pts:
+                cand = np.asarray(pts, dtype=np.float64)
+                source = "cloud"
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            cand = None
 
-    max_sq = (max_ball_mm * max_ball_mm) if max_ball_mm > 0 else float("inf")
+    if cand is None or cand.size == 0:
+        vox = _VoxelAccess(filepath)
+        axis_mm = np.sqrt((M * M).sum(axis=0))
+        axis_mm = np.where(axis_mm > 1e-6, axis_mm, 1.0)
+        box_rad = np.ceil((2.0 * radius_mm) / axis_mm).astype(int) + 1
+        i0, i1 = max(0, si - int(box_rad[0])), min(shape[0], si + int(box_rad[0]) + 1)
+        j0, j1 = max(0, sj - int(box_rad[1])), min(shape[1], sj + int(box_rad[1]) + 1)
+        k0, k1 = max(0, sk - int(box_rad[2])), min(shape[2], sk + int(box_rad[2]) + 1)
+        if getattr(vox, "_data", None) is not None:
+            sub = np.asarray(vox._data[i0:i1, j0:j1, k0:k1], dtype=np.float32)
+            ii, jj, kk = np.where(sub >= thr)
+            cand = np.column_stack((ii + i0, jj + j0, kk + k0)).astype(np.float64)
+        else:
+            candidates = []
+            for i in range(i0, i1):
+                for j in range(j0, j1):
+                    for k in range(k0, k1):
+                        if (i, j, k) in ex_set:
+                            continue
+                        if vox.value(i, j, k) >= thr:
+                            candidates.append((i, j, k))
+            cand = np.asarray(candidates, dtype=np.float64)
 
-    def within_ball(i: int, j: int, k: int) -> bool:
-        if max_ball_mm <= 0:
-            return True
-        return offset_sq_mm(i - si, j - sj, k - sk) <= max_sq
-
-    q = deque([(si, sj, sk)])
-    visited = set()
-    component = []
-    while q and len(component) < max_voxels:
-        i, j, k = q.popleft()
-        if (i, j, k) in visited:
-            continue
-        if (i, j, k) in ex_set:
-            continue
-        if not (0 <= i < shape[0] and 0 <= j < shape[1] and 0 <= k < shape[2]):
-            continue
-        if not within_ball(i, j, k):
-            continue
-        if vox.value(i, j, k) < thr:
-            continue
-        visited.add((i, j, k))
-        component.append([int(i), int(j), int(k)])
-        for di in (-1, 0, 1):
-            for dj in (-1, 0, 1):
-                for dk in (-1, 0, 1):
-                    if di == 0 and dj == 0 and dk == 0:
-                        continue
-                    ni, nj, nk = i + di, j + dj, k + dk
-                    if within_ball(ni, nj, nk):
-                        q.append((ni, nj, nk))
-
-    if not component:
+    if cand is None or cand.size == 0:
         return jsonify({"success": False, "error": "empty_component"}), 400
+
+    if ex_set and source == "cloud":
+        keep = np.array(
+            [(int(a), int(b), int(c)) not in ex_set for a, b, c in cand],
+            dtype=bool,
+        )
+        if keep.any():
+            cand = cand[keep]
+
+    # Legacy: select_points_near then center_selection(selection_iterations).
+    center = np.array([si, sj, sk], dtype=np.float64)
+    inside = None
+    n_iter = max(1, selection_iterations)
+    for _ in range(n_iter):
+        delta = cand - center
+        mm_vec = delta @ M.T
+        dist_sq = (mm_vec * mm_vec).sum(axis=1)
+        inside = dist_sq <= r_sq
+        if inside.any():
+            center = cand[inside].mean(axis=0)
+        else:
+            break
+
+    if inside is None or not inside.any():
+        # Seed was a cloud click; keep at least the seed so UI has a blob.
+        component = [[si, sj, sk]]
+    else:
+        sel = cand[inside]
+        if len(sel) > max_voxels:
+            # Keep the closest points to the final center rather than an arbitrary slice.
+            delta = sel - center
+            mm_vec = delta @ M.T
+            order = np.argsort((mm_vec * mm_vec).sum(axis=1))
+            sel = sel[order[:max_voxels]]
+        component = [[int(round(v[0])), int(round(v[1])), int(round(v[2]))] for v in sel]
 
     arr = np.asarray(component, dtype=np.float64)
     cen = np.round(arr.mean(axis=0)).astype(int)
@@ -866,7 +1027,47 @@ def bright_component(filename):
             "centroid_mm": [round(float(x), 2) for x in mm],
             "intensity_threshold": thr,
             "capped": len(component) >= max_voxels,
-            "max_ball_mm": max_ball_mm,
+            "max_ball_mm": radius_mm,
+            "selection_iterations": n_iter,
+            "source": source,
+        }
+    )
+
+
+@scans_bp.route("/<filename>/orientation", methods=["GET"])
+def orientation(filename):
+    """Anatomical axis directions (R/A/S/L/P/I) as unit vectors in cloud scene space.
+
+    The cloud renders voxel (i,j,k) at (i*sx, j*sy, k*sz) where sx/sy/sz are the
+    voxel spacings (norms of the affine columns). To place R/A/S/L/P/I labels the
+    way the desktop tool does, we map each RAS direction into that scaled voxel
+    space: scene_from_ras = diag(spacing) @ inv(affine[:3,:3]).
+    """
+    data_dir = current_app.config["DATA_DIR"]
+    filepath = _scan_filepath(filename)
+    if not filepath:
+        return jsonify({"error": f"Scan '{filename}' not found"}), 404
+
+    _, affine, _ = _open_scan_dataobj(filepath)
+    R3 = affine[:3, :3]
+    spacing = np.array(_voxel_spacing_mm(affine), dtype=np.float64)
+    scene_from_ras = np.diag(spacing) @ np.linalg.inv(R3)
+
+    def dir_for(ras_vec):
+        v = scene_from_ras @ np.asarray(ras_vec, dtype=np.float64)
+        n = float(np.linalg.norm(v))
+        if n < 1e-9:
+            return [0.0, 0.0, 0.0]
+        return [float(x) for x in (v / n)]
+
+    return jsonify(
+        {
+            "R": dir_for([1, 0, 0]),
+            "L": dir_for([-1, 0, 0]),
+            "A": dir_for([0, 1, 0]),
+            "P": dir_for([0, -1, 0]),
+            "S": dir_for([0, 0, 1]),
+            "I": dir_for([0, 0, -1]),
         }
     )
 
@@ -875,8 +1076,8 @@ def bright_component(filename):
 def mm_to_voxel_endpoint(filename):
     """Map RAS mm → integer voxel index (rounded, clipped to volume)."""
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True) or {}
@@ -896,8 +1097,8 @@ def mm_to_voxel_endpoint(filename):
 def voxel_to_mm_endpoint(filename):
     """Integer voxel [i,j,k] → RAS mm (voxel centre)."""
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True) or {}
@@ -937,8 +1138,8 @@ def interpolate_contacts(filename):
     }
     """
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True) or {}
@@ -1019,8 +1220,8 @@ def interior_path(filename):
     Returns diagnostics describing what was tried so the client can report it.
     """
     data_dir = current_app.config["DATA_DIR"]
-    filepath = os.path.join(data_dir, filename)
-    if not os.path.isfile(filepath):
+    filepath = _scan_filepath(filename)
+    if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
 
     body = request.get_json(force=True)

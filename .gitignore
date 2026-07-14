@@ -8,9 +8,16 @@ web/frontend/node_modules/
 web/frontend/build/
 web/frontend/.env.development
 web/backend/__pycache__/
-web/deploy.zip
+web/deploy*.zip
 web/backend/data/*.nii
 web/backend/data/*.nii.gz
+web/backend/data/*.log
+web/backend/data/*.cloud_*.json
+web/backend/cloud_caches/
 web/backend/annotations/*.json
 # Demo / teaching annotation (redact before any public release)
 !web/backend/annotations/example.json
+terraform/terraform.tfvars
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform/

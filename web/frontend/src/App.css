@@ -79,6 +79,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ct-threshold-status {
+  font-size: 12px;
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ct-threshold-status-ok {
+  color: #7fd99a;
+}
+
+.ct-threshold-status-err {
+  color: #f07178;
+}
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -874,6 +890,10 @@ input:focus {
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .modal .scan-list li:hover {
