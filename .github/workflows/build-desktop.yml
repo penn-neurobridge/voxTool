@@ -1,0 +1,88 @@
+name: Build desktop app
+
+# Produces the downloadable VoxTool builds. Windows installers cannot be built
+# on a Mac, so each platform is built on its own runner and the artifacts are
+# collected here. Run it from the Actions tab, or push a v* tag for a release.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            label: macOS (Apple Silicon)
+            artifact: voxtool-macos-arm64
+            builder_args: --mac --arm64
+          - os: macos-13
+            label: macOS (Intel)
+            artifact: voxtool-macos-x64
+            builder_args: --mac --x64
+          - os: windows-latest
+            label: Windows
+            artifact: voxtool-windows-x64
+            builder_args: --win --x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install frontend dependencies
+        working-directory: web/frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web/frontend
+        # Empty API URL keeps every request relative, so the UI talks to the
+        # local backend on whichever port it was given.
+        env:
+          REACT_APP_API_URL: ""
+          GENERATE_SOURCEMAP: "false"
+          CI: "false"
+        run: npm run build
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm install
+
+      - name: Freeze backend
+        working-directory: desktop
+        run: node scripts/build-backend.js
+
+      - name: Verify the packaged backend actually starts
+        working-directory: desktop
+        run: node scripts/test-backend-launch.js --packaged
+
+      - name: Package application
+        working-directory: desktop
+        env:
+          # Unsigned builds: skip electron-builder's notarization path entirely.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder ${{ matrix.builder_args }} --publish never
+
+      - name: Collect installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
