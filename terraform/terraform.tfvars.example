@@ -16,7 +16,10 @@ create_github_actions_user = true
 # Optional custom domain (requires route53.tf and DNS delegation)
 # domain_name = "voxtool.example.com"
 
-# Override after first deploy once you know CloudFront URL:
+# Set this after the first deploy, once you know the frontend CloudFront URL.
+# It is not optional in practice: with no value and no domain_name, the computed
+# default is localhost only, so the next apply revokes the deployed frontend's
+# CORS access and the live app starts failing every API call.
 # cors_allowed_origins = "https://d1234abcd.cloudfront.net,http://localhost:3000"
 
 eb_instance_type = "t3.small"
