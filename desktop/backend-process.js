@@ -68,7 +68,7 @@ function findFreePort() {
   });
 }
 
-function backendEnv(port, extra = {}) {
+function backendEnv(port, extra = {}, { packaged = false } = {}) {
   const env = {
     ...process.env,
     VOXTOOL_LOCAL: "1",
@@ -83,6 +83,20 @@ function backendEnv(port, extra = {}) {
   delete env.AWS_ACCESS_KEY_ID;
   delete env.AWS_SECRET_ACCESS_KEY;
   delete env.AWS_SESSION_TOKEN;
+
+  // A frozen PyInstaller binary ships its own interpreter. GitHub's
+  // setup-python action (and many conda installs) set PYTHONHOME / PYTHONPATH
+  // in the parent environment; if those leak in, the frozen app looks for
+  // stdlib in the wrong place and exits before it can answer /api/health —
+  // which is exactly how the CI verify step was failing in ~1s.
+  if (packaged) {
+    delete env.PYTHONHOME;
+    delete env.PYTHONPATH;
+    delete env.PYTHONSTARTUP;
+    delete env.PYTHONEXECUTABLE;
+    delete env.PYTHONUSERBASE;
+    delete env.__PYVENV_LAUNCHER__;
+  }
   return env;
 }
 
@@ -111,7 +125,12 @@ function startBackend({ port, isDev, projectRoot, resourcesPath }) {
   if (!fs.existsSync(exe)) {
     throw new Error(`Backend executable missing at ${exe}`);
   }
-  return spawn(exe, [], { cwd: path.dirname(exe), env: backendEnv(port) });
+  return spawn(exe, [], {
+    cwd: path.dirname(exe),
+    env: backendEnv(port, {}, { packaged: true }),
+    // Windows: avoid a console window flashing during the smoke test.
+    windowsHide: true,
+  });
 }
 
 /** Poll /api/health until the backend answers, the process dies, or we time out. */

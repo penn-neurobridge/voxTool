@@ -32,7 +32,7 @@ function check(name, ok, detail = "") {
 
 /** Build a tiny NIfTI with a known straight electrode using the backend's own numpy. */
 function makeFixture(python) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "voxtool fixture "));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "voxtool-fixture-"));
   const out = path.join(dir, "fixture_ct.nii.gz");
   const script = `
 import nibabel as nib, numpy as np
@@ -49,10 +49,32 @@ nib.save(nib.Nifti1Image(vol, aff), ${JSON.stringify(out)})
   return out;
 }
 
+/** Prefer the freeze venv (has nibabel); fall back to whatever CI exposes. */
+function fixturePython() {
+  if (process.env.VOXTOOL_PYTHON) return process.env.VOXTOOL_PYTHON;
+  const isWin = process.platform === "win32";
+  const venv = path.join(
+    PROJECT_ROOT,
+    "desktop",
+    ".venv-build",
+    isWin ? "Scripts" : "bin",
+    isWin ? "python.exe" : "python"
+  );
+  if (fs.existsSync(venv)) return venv;
+  return isWin ? "python" : "python3";
+}
+
 async function main() {
-  const python = process.env.VOXTOOL_PYTHON || "python3";
+  const python = fixturePython();
   const port = await findFreePort();
   check("found a free loopback port", Number.isInteger(port) && port > 1024, `port ${port}`);
+
+  if (packaged) {
+    const exeName =
+      process.platform === "win32" ? "voxtool-backend.exe" : "voxtool-backend";
+    const exe = path.join(PROJECT_ROOT, "desktop", "resources", "backend", exeName);
+    check("frozen backend is staged", fs.existsSync(exe), exe);
+  }
 
   const log = [];
   const proc = startBackend({
@@ -63,6 +85,7 @@ async function main() {
   });
   proc.stdout?.on("data", (d) => log.push(d.toString()));
   proc.stderr?.on("data", (d) => log.push(d.toString()));
+  proc.on("error", (err) => log.push(`spawn error: ${err.message}\n`));
 
   const base = `http://127.0.0.1:${port}`;
   const api = (p) => `${base}/api/scans${p}`;
