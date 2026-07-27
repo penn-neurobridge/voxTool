@@ -536,8 +536,10 @@ export default function ThresholdCloudViewer({
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
-    // Kept deliberately dim: near-white cloud points blend over the contact colors
-    // and are what made submitted contacts read as pastel.
+    // Dimmer than the near-white it used to be, so the cloud reads as background
+    // rather than competing with the contacts. (What actually made contacts look
+    // pastel was this material being transparent and therefore drawn *over* them;
+    // the markers now join the transparent pass so they win.)
     const mat = new THREE.PointsMaterial({
       color: 0x8e9aa8,
       size: Math.max(sx, sy, sz) * 1.5,
@@ -895,6 +897,9 @@ export default function ThresholdCloudViewer({
       color: PICK_COLOR,
       size: Math.max(sx, sy, sz) * 1.35,
       sizeAttenuation: true,
+      // See the contact markers below: transparent so it draws after the cloud.
+      transparent: true,
+      opacity: 1,
     });
 
     const hi = new THREE.Points(geom, mat);
@@ -973,9 +978,15 @@ export default function ThresholdCloudViewer({
     const addFallbackBlock = (voxel, colorHex) => {
       if (!voxel || voxel.length !== 3) return;
       const geom = new THREE.BoxGeometry(sx * 1.8, sy * 1.8, sz * 1.8);
-      const mat = new THREE.MeshBasicMaterial({ color: colorHex, depthTest: true });
+      const mat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        depthTest: true,
+        transparent: true,
+        opacity: 1,
+      });
       const mesh = new THREE.Mesh(geom, mat);
       mesh.position.set(voxel[0] * sx, voxel[1] * sy, voxel[2] * sz);
+      mesh.renderOrder = 2;
       group.add(mesh);
     };
 
@@ -1002,6 +1013,12 @@ export default function ThresholdCloudViewer({
         size: Math.max(sx, sy, sz) * 1.55,
         sizeAttenuation: true,
         vertexColors: true,
+        // Must join the transparent pass to sit above the cloud. Opaque objects
+        // all draw before any transparent one, and renderOrder only sorts within
+        // a pass — so an opaque contact gets painted over by the 80% grey cloud
+        // and keeps a fifth of its colour. Fully opaque, just later in the queue.
+        transparent: true,
+        opacity: 1,
       });
       const pts = new THREE.Points(geom, mat);
       pts.renderOrder = 2;
