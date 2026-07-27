@@ -1,10 +1,30 @@
 # VoxTool
 
-Electrode contact localization on post-implant CT. This repo includes:
+Electrode contact localization on post-implant CT.
 
-1. **Desktop app (current)** — the cloud app packaged to run entirely offline (`desktop/`)
-2. **Cloud web app** — React frontend + Flask API on AWS (Slice view + Threshold cloud)
-3. **Desktop (legacy)** — the original Qt / Mayavi tool, `launch_pyloc.py`
+There are three ways to run the current tool, and they are **the same program** —
+one React interface and one Flask backend, packaged three ways. Picking, snapping,
+interpolation and export are byte-for-byte the same code in all three, so a
+localization done in one is identical to the same localization done in another.
+
+| | How you get it | Where scans live | Needs internet |
+| --- | --- | --- | --- |
+| **Desktop app** | Download an installer | Read in place on your disk | No |
+| **Run from source** | `git clone`, then one command | Read in place on your disk | Only to install |
+| **Cloud web app** | Open a URL | Uploaded to shared AWS S3 | Yes |
+
+Use the **desktop app** or **run from source** for identifiable or otherwise
+restricted imaging. Both keep every scan on your machine. The cloud app is a
+shared public demo — see the warning in its section below.
+
+They cannot drift apart, because there is nothing to keep in sync: all three
+build from `web/backend` and `web/frontend` on this branch. A single environment
+variable, `VOXTOOL_LOCAL`, decides whether a scan is opened in place on disk or
+uploaded to S3. Nothing else differs, and no algorithm reads it.
+
+The original Qt / Mayavi tool (`launch_pyloc.py`) is still here as
+[Desktop setup (legacy)](#desktop-setup-legacy), but it pins Python 2.7 and is
+superseded by the three above.
 
 ## Desktop app (offline)
 
@@ -55,6 +75,49 @@ scan from the list only closes it; your file on disk is untouched.
 ### Building it yourself
 
 See [`desktop/README.md`](desktop/README.md).
+
+## Run from source
+
+The clone-and-run route, like the legacy tool. Use it when you would rather not
+install anything, when there is no installer for your platform, or to try a
+change you just made. It runs the same code the installer ships.
+
+**You need:** Python 3.9+ and [Node.js](https://nodejs.org) 18+ (Node compiles the
+interface; it is not needed once built).
+
+```bash
+git clone https://github.com/penn-neurobridge/voxTool.git
+cd voxTool
+python3 run_voxtool.py
+```
+
+That is the whole thing. It opens your browser at the tool, ready to use.
+
+The first run takes a few minutes: it creates a `.venv`, installs the backend
+dependencies, and compiles the interface. Later runs start in a couple of
+seconds. Press **Ctrl+C** in the terminal to stop.
+
+Scans are read **in place** from wherever they already are — paste a full path
+into the box in the **Load a CT Scan** dialog. A browser cannot see file paths
+the way a native dialog can, which is the one visible difference from the
+desktop app; everything downstream is identical.
+
+Useful flags:
+
+| Flag | Effect |
+| --- | --- |
+| `--port 5001` | Use a fixed port instead of a free one |
+| `--no-browser` | Do not open a browser |
+| `--rebuild-ui` | Recompile the interface after changing frontend code |
+| `--no-venv` | Use the current Python instead of creating `.venv` |
+
+Notes:
+
+- The server binds to `127.0.0.1`, so nothing on the network can reach your scans.
+- Cached threshold clouds go to the per-user app folder, never next to your scan.
+- It refuses to reuse an interface compiled for the cloud, which would otherwise
+  send this "local" app back to AWS. If you have built the frontend for
+  deployment, expect one automatic recompile.
 
 ## Cloud demo (v1)
 
@@ -119,18 +182,24 @@ python launch_pyloc.py
 
 ## Local web development
 
+To just run the tool, use `python3 run_voxtool.py` (above). For frontend work you
+want hot reload, so run the two processes separately:
+
 ```bash
-# API
+# API — VOXTOOL_LOCAL opens scans in place and skips S3
 cd web/backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-flask --app app run   # or gunicorn, etc.
+pip install -r requirements-desktop.txt
+VOXTOOL_LOCAL=1 PORT=5001 python desktop_server.py
 
-# Frontend
+# Frontend (separate terminal) — package.json proxies /api to port 5001
 cd web/frontend
 npm install
-REACT_APP_API_URL=http://localhost:5000 npm start
+npm start
 ```
+
+Drop `VOXTOOL_LOCAL` and install `requirements.txt` instead to develop against
+cloud behaviour (uploads, S3, the 150 MB cap).
 
 Infra lives under `terraform/` (dev: S3 + CloudFront + Elastic Beanstalk).
 

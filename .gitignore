@@ -25,6 +25,8 @@ desktop/.venv-build/
 desktop/.dist-backend/
 web/backend/build/
 web/backend/dist/
+# Run-from-source launcher
+.venv/
 
 terraform/terraform.tfvars
 terraform/*.tfstate

@@ -81,6 +81,14 @@ export default function App() {
   // {tone: 'ok'|'warn'|'err', text: string} — shows under the Interpolate button.
   const [interpStatus, setInterpStatus] = useState(null);
   const [viewerTab, setViewerTab] = useState("slices");
+  // True when the backend runs on this machine (desktop app, or the clone-and-run
+  // launcher in a browser). Reported by /api/health so the two stay in step.
+  const [backendLocal, setBackendLocal] = useState(false);
+  const [pathInput, setPathInput] = useState("");
+
+  // Open-in-place needs a backend that can read the disk. Electron adds a native
+  // file dialog on top; a plain browser cannot see paths, so it asks for one.
+  const localFiles = IS_DESKTOP || backendLocal;
 
   const nextLabel = useMemo(
     () => nextLabelForLead(selectedLead, contacts),
@@ -90,6 +98,28 @@ export default function App() {
   useEffect(() => {
     setContactIndexInput(nextLabel);
   }, [selectedLead, nextLabel]);
+
+  useEffect(() => {
+    if (IS_DESKTOP) {
+      setBackendLocal(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/api/health`, {
+          signal: AbortSignal.timeout(10_000),
+        });
+        const data = await res.json();
+        if (!cancelled) setBackendLocal(!!data.local);
+      } catch {
+        // Cloud behaviour is the safe default if the probe fails.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
 
   const openScanPicker = useCallback(async () => {
@@ -133,7 +163,7 @@ export default function App() {
   const handleScanDelete = useCallback(
     async (filename) => {
       if (!filename) return;
-      const prompt = IS_DESKTOP
+      const prompt = localFiles
         ? `Close "${filename}"? Your file on disk is not deleted.`
         : `Remove "${filename}" from the server?`;
       if (!window.confirm(prompt)) return;
@@ -154,7 +184,7 @@ export default function App() {
         setPickerError(`Could not delete scan: ${err.message || err}`);
       }
     },
-    [pickerSelected, scanFilename]
+    [pickerSelected, scanFilename, localFiles]
   );
 
   /** Desktop: register a scan by absolute path and read it where it already lives. */
@@ -1180,7 +1210,7 @@ export default function App() {
                 className="btn btn-primary"
                 onClick={openScanPicker}
               >
-                {IS_DESKTOP ? "Open scan" : "Load / upload scan"}
+                {localFiles ? "Open scan" : "Load / upload scan"}
               </button>
             </div>
           </div>
@@ -1212,12 +1242,40 @@ export default function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Load a CT Scan</h2>
             <p style={{ color: "var(--text-secondary)", marginTop: 0 }}>
-              {IS_DESKTOP
+              {localFiles
                 ? "Choose the NIfTI (.nii / .nii.gz) you want to work on. It is read " +
                   "directly from where it sits on your disk — nothing is copied or uploaded."
                 : "Upload the NIfTI (.nii / .nii.gz) you want to work on. AWS accepts " +
                   "files up to ~150 MB."}
             </p>
+            {!IS_DESKTOP && backendLocal && (
+              // A browser cannot reveal a file's path, so the local server takes one
+              // directly. Same endpoint the desktop file dialog calls.
+              <form
+                style={{ display: "flex", gap: 8, marginBottom: "1rem" }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const p = pathInput.trim();
+                  if (p) openScanAtPath(p);
+                }}
+              >
+                <input
+                  type="text"
+                  style={{ flex: 1 }}
+                  placeholder="/full/path/to/scan.nii.gz"
+                  value={pathInput}
+                  disabled={uploadingScan}
+                  onChange={(e) => setPathInput(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={uploadingScan || !pathInput.trim()}
+                >
+                  {uploadingScan ? "Opening…" : "Open"}
+                </button>
+              </form>
+            )}
             <div
               className="modal-actions modal-actions-scan"
               style={{ marginBottom: "1rem" }}
@@ -1236,7 +1294,13 @@ export default function App() {
                   className="btn btn-primary"
                   style={{ cursor: uploadingScan ? "wait" : "pointer" }}
                 >
-                  {uploadingScan ? "Uploading…" : "Upload .nii / .nii.gz"}
+                  {uploadingScan
+                    ? backendLocal
+                      ? "Copying…"
+                      : "Uploading…"
+                    : backendLocal
+                    ? "Or copy a file in…"
+                    : "Upload .nii / .nii.gz"}
                   <input
                     type="file"
                     accept=".nii,.gz,application/gzip"
@@ -1258,7 +1322,7 @@ export default function App() {
               <p style={{ color: "var(--text-secondary)" }}>Loading scan list…</p>
             ) : scanList.length === 0 ? (
               <p style={{ color: "var(--text-secondary)" }}>
-                {IS_DESKTOP
+                {localFiles
                   ? "No scans opened yet."
                   : "No scans uploaded on this server yet."}
               </p>
@@ -1271,7 +1335,7 @@ export default function App() {
                     marginBottom: "0.5rem",
                   }}
                 >
-                  {IS_DESKTOP
+                  {localFiles
                     ? "Recently opened (click to select, × to close):"
                     : "Already on this server (click to select, × to remove):"}
                 </p>

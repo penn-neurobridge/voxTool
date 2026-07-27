@@ -4,10 +4,19 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const API = process.env.REACT_APP_API_URL || "";
 
-/** Desktop serves the UI and the API from the same origin, so relative URLs are correct. */
 const IS_DESKTOP =
   typeof window !== "undefined" && !!window.voxtoolDesktop?.isDesktop;
-const API_READY = !!API || IS_DESKTOP;
+
+/** Both offline routes serve the UI from the backend itself, so relative URLs are
+ *  correct and no API URL is needed. Local mode binds loopback only, so a loopback
+ *  hostname is a reliable signal — the cloud build is served from CloudFront, where
+ *  an empty API URL really would be a misconfiguration worth reporting. */
+const SAME_ORIGIN_API =
+  typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname);
+
+const LOCAL_UI = IS_DESKTOP || SAME_ORIGIN_API;
+const API_READY = !!API || LOCAL_UI;
 
 /**
  * Pick radius (mm). Slightly under legacy lead radius (3) so tip blobs match
@@ -392,7 +401,7 @@ export default function ThresholdCloudViewer({
         ).catch(() => null);
         if (readyRes?.status === 404) {
           throw new Error(
-            IS_DESKTOP
+            LOCAL_UI
               ? `${scanFilename} could not be read — it may have been moved or renamed. Open the scan again.`
               : `${scanFilename} was not found on the server. Try Load scan again (S3 should restore it after a redeploy).`
           );
