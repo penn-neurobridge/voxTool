@@ -1,0 +1,117 @@
+{
+  "name": "voxtool-desktop",
+  "productName": "VoxTool",
+  "version": "1.0.0",
+  "description": "Local desktop build of VoxTool — CT electrode localization that runs entirely offline.",
+  "main": "main.js",
+  "license": "SEE LICENSE IN ../LICENSE.txt",
+  "author": {
+    "name": "VoxTool"
+  },
+  "private": true,
+  "scripts": {
+    "postinstall": "node scripts/fix-electron-signature.js",
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node scripts/test-backend-launch.js",
+    "build:frontend": "cd ../web/frontend && npm run build",
+    "build:backend": "node scripts/build-backend.js",
+    "prepare:resources": "npm run build:frontend && npm run build:backend",
+    "dist": "npm run prepare:resources && electron-builder",
+    "dist:mac": "npm run prepare:resources && electron-builder --mac",
+    "dist:win": "npm run prepare:resources && electron-builder --win",
+    "dist:linux": "npm run prepare:resources && electron-builder --linux",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "org.voxtool.desktop",
+    "productName": "VoxTool",
+    "copyright": "Copyright © VoxTool contributors",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/backend",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.medical",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "VoxTool ${version}",
+      "contents": [
+        {
+          "x": 140,
+          "y": 200
+        },
+        {
+          "x": 400,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VoxTool"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Science"
+    }
+  }
+}

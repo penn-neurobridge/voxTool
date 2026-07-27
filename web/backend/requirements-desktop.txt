@@ -1,0 +1,7 @@
+# Desktop build: same processing stack as the cloud API, minus anything that
+# talks to AWS. boto3 is deliberately absent so the offline app cannot reach S3.
+flask>=3.0
+flask-cors>=4.0
+nibabel>=5.2
+numpy>=1.26
+waitress>=3.0

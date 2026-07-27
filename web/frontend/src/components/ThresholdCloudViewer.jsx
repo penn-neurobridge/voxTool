@@ -4,6 +4,11 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const API = process.env.REACT_APP_API_URL || "";
 
+/** Desktop serves the UI and the API from the same origin, so relative URLs are correct. */
+const IS_DESKTOP =
+  typeof window !== "undefined" && !!window.voxtoolDesktop?.isDesktop;
+const API_READY = !!API || IS_DESKTOP;
+
 /**
  * Pick radius (mm). Slightly under legacy lead radius (3) so tip blobs match
  * legacy size a bit better while still filling a round contact highlight.
@@ -242,22 +247,24 @@ function selectDisplayedContact(pickMap, seedIndex, spacing, radiusMm = PICK_BAL
   return { voxels, centroid_voxel, count: voxels.length };
 }
 
-/** Live pick highlight color — soft magenta like legacy `_selected` tint. */
-const PICK_COLOR = 0xff66aa;
+/** Live pick highlight color — saturated magenta, matching the legacy `spring` tint. */
+const PICK_COLOR = 0xff1f7a;
 
 /** Distinct per-lead colors for submitted contacts. Index 0 (first lead) is green.
- *  Orange is intentionally excluded so submitted contacts never look like the live pick. */
+ *  Hues are spread apart for categorical separation and held near 45-55% lightness so
+ *  they stay legible against the grey cloud without going neon. The magenta band is
+ *  reserved for PICK_COLOR so a submitted contact never reads as the live pick. */
 const LEAD_PALETTE_HEX = [
-  0x22ee55, // green
-  0xffd23f, // gold
-  0x3fc7ff, // cyan
-  0xc763ff, // purple
-  0xff63c7, // pink
-  0x63ffc7, // teal
-  0x9b8cff, // periwinkle
-  0xa0e838, // lime
-  0xff5c8a, // rose
-  0x5ce1e6, // aqua
+  0x1fb84c, // green
+  0x00a896, // teal
+  0x0e9bd6, // cyan
+  0x3b72e0, // blue
+  0x7a5ae0, // indigo
+  0xa347d6, // purple
+  0xd63b2f, // red
+  0xe07b1e, // orange
+  0xc9a21a, // gold
+  0x8faf1b, // olive
 ];
 
 function leadColorHex(leadName, leads) {
@@ -352,7 +359,7 @@ export default function ThresholdCloudViewer({
 
   const fetchCloud = useCallback(async () => {
     if (!scanFilename) return;
-    if (!API) {
+    if (!API_READY) {
       setError(
         "API URL not configured. Rebuild the frontend with REACT_APP_API_URL set to the API CloudFront URL."
       );
@@ -385,7 +392,9 @@ export default function ThresholdCloudViewer({
         ).catch(() => null);
         if (readyRes?.status === 404) {
           throw new Error(
-            `${scanFilename} was not found on the server. Try Load scan again (S3 should restore it after a redeploy).`
+            IS_DESKTOP
+              ? `${scanFilename} could not be read — it may have been moved or renamed. Open the scan again.`
+              : `${scanFilename} was not found on the server. Try Load scan again (S3 should restore it after a redeploy).`
           );
         }
         if (readyRes?.ok) {
@@ -518,12 +527,14 @@ export default function ThresholdCloudViewer({
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
+    // Kept deliberately dim: near-white cloud points blend over the contact colors
+    // and are what made submitted contacts read as pastel.
     const mat = new THREE.PointsMaterial({
-      color: 0xc8d4e0,
+      color: 0x8e9aa8,
       size: Math.max(sx, sy, sz) * 1.5,
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.8,
     });
 
     const pts = new THREE.Points(geom, mat);
@@ -768,7 +779,7 @@ export default function ThresholdCloudViewer({
 
   // Anatomical axis directions (R/A/S/L/P/I) for orientation labels.
   useEffect(() => {
-    if (!scanFilename || !API) {
+    if (!scanFilename || !API_READY) {
       setOrientation(null);
       return;
     }
@@ -875,11 +886,10 @@ export default function ThresholdCloudViewer({
       color: PICK_COLOR,
       size: Math.max(sx, sy, sz) * 1.35,
       sizeAttenuation: true,
-      transparent: true,
-      opacity: 0.72,
     });
 
     const hi = new THREE.Points(geom, mat);
+    hi.renderOrder = 3;
     hi.name = "component-highlight";
     scene.add(hi);
   }, [componentVoxels, meta]);

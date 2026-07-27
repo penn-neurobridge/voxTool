@@ -6,10 +6,12 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 
 import numpy as np
-from flask import Blueprint, send_from_directory, jsonify, current_app, request
+from flask import Blueprint, send_file, send_from_directory, jsonify, current_app, request
 
+import local_mode
 from ct_cache import get_volume, volume_is_cached, warm_volume
 from legacy_interpolator import interpolate_between_endpoints, lead_radius_mm
 from scan_store import (
@@ -24,11 +26,26 @@ from scan_store import (
 
 scans_bp = Blueprint("scans", __name__)
 
+NIFTI_EXTS = (".nii", ".nii.gz")
+
+
+def _is_nifti(name: str) -> bool:
+    return name.lower().endswith(NIFTI_EXTS)
+
 
 def _scan_filepath(filename: str) -> str | None:
-    """Local path for a scan, downloading from S3 when needed."""
+    """Resolve the name the UI uses to a readable path on disk.
+
+    Desktop scans are registered by absolute path and read where they live, so
+    they are checked first; anything else falls back to the managed data
+    directory (pulling from S3 when the cloud deployment is configured).
+    """
+    name = filename or ""
+    registered = local_mode.resolve(name)
+    if registered:
+        return registered
     data_dir = current_app.config["DATA_DIR"]
-    return ensure_local(os.path.basename(filename or ""), data_dir)
+    return ensure_local(os.path.basename(name), data_dir)
 
 
 def _volume_warm_enabled() -> bool:
@@ -221,6 +238,14 @@ def get_scan(filename):
     filepath = _scan_filepath(filename)
     if not filepath:
         return jsonify({"error": f"Scan '{filename}' not found"}), 404
+    # Desktop scans live outside the managed data directory, so stream by path.
+    if os.path.dirname(os.path.abspath(filepath)) != os.path.abspath(data_dir):
+        return send_file(
+            filepath,
+            mimetype="application/octet-stream",
+            conditional=True,
+            download_name=os.path.basename(filepath),
+        )
     return send_from_directory(
         data_dir, os.path.basename(filepath), mimetype="application/octet-stream"
     )
@@ -229,18 +254,62 @@ def get_scan(filename):
 @scans_bp.route("/", methods=["GET"])
 def list_scans():
     data_dir = current_app.config["DATA_DIR"]
-    valid_ext = (".nii", ".nii.gz")
-    local = {
-        f
-        for f in os.listdir(data_dir)
-        if any(f.endswith(ext) for ext in valid_ext)
-    }
+    local = {f for f in os.listdir(data_dir) if _is_nifti(f)}
+
+    if local_mode.is_local_mode():
+        # Recently opened files first — they are what the user actually works on.
+        recent = local_mode.registered_scans()
+        return jsonify(recent + sorted(local - set(recent)))
+
     remote = list_remote_scans()
     if remote is not None:
         files = sorted(local | set(remote))
     else:
         files = sorted(local)
     return jsonify(files)
+
+
+@scans_bp.route("/open_local", methods=["POST"])
+def open_local_scan():
+    """Open a scan in place from an absolute path (desktop only).
+
+    Mirrors the legacy PyQt "Load Scan" flow: the CT is read where it already
+    lives instead of being copied into the app, so there is no size ceiling and
+    no second copy of patient data.
+
+    Body: { path: "/abs/path/to/scan.nii.gz" }
+    """
+    if not local_mode.is_local_mode():
+        return jsonify({"success": False, "error": "not available in cloud mode"}), 403
+
+    body = request.get_json(silent=True) or {}
+    raw = (body.get("path") or "").strip()
+    if not raw:
+        return jsonify({"success": False, "error": "path is required"}), 400
+
+    path = os.path.abspath(os.path.expanduser(raw))
+    if not os.path.isfile(path):
+        return jsonify({"success": False, "error": f"No such file: {path}"}), 404
+    if not _is_nifti(path):
+        return jsonify(
+            {"success": False, "error": "file must end with .nii or .nii.gz"}
+        ), 400
+    if not os.access(path, os.R_OK):
+        return jsonify({"success": False, "error": f"File is not readable: {path}"}), 403
+
+    name = local_mode.register_scan(path)
+    size_mb = os.path.getsize(path) / (1024 * 1024)
+    cloud_ready = os.path.isfile(_cloud_cache_path(path, 99.96))
+
+    return jsonify(
+        {
+            "success": True,
+            "filename": name,
+            "path": path,
+            "size_mb": round(size_mb, 1),
+            "cloud_ready": cloud_ready,
+        }
+    )
 
 
 @scans_bp.route("/upload", methods=["POST"])
@@ -295,9 +364,24 @@ def delete_scan(filename):
     """Remove an uploaded NIfTI (local + S3) and side-car cloud cache files."""
     data_dir = current_app.config["DATA_DIR"]
     name = os.path.basename(filename or "")
-    lower = name.lower()
-    if not (lower.endswith(".nii") or lower.endswith(".nii.gz")):
+    if not _is_nifti(name):
         return jsonify({"success": False, "error": "invalid filename"}), 400
+
+    # A scan opened in place belongs to the user, not to us: close it and drop the
+    # derived cache, but never touch the original file on their disk.
+    if local_mode.is_local_mode():
+        path = local_mode.resolve(name)
+        if path:
+            for pct in (99.96, 99.5, 99.0):
+                base = local_mode.cache_path_for(path, pct)
+                for side in (base, base + ".log", base + ".building"):
+                    if os.path.isfile(side):
+                        try:
+                            os.remove(side)
+                        except OSError:
+                            pass
+            local_mode.unregister(name)
+            return jsonify({"success": True, "filename": name, "closed": True})
 
     path = _scan_filepath(name)
     remote = list_remote_scans() or []
@@ -471,6 +555,10 @@ def _excluded_set(excluded):
 
 
 def _cloud_cache_path(filepath: str, threshold_pct: float) -> str:
+    # Desktop keeps derived data in the app folder: the scan's own directory may
+    # be read-only or on a share the lab does not want written to.
+    if local_mode.is_local_mode():
+        return local_mode.cache_path_for(filepath, threshold_pct)
     return f"{filepath}.cloud_{threshold_pct:.4f}.json"
 
 
@@ -720,11 +808,46 @@ def _write_threshold_cloud_cache(filepath: str, threshold_pct: float) -> dict:
     return payload
 
 
+def _build_cloud_cache_to(filepath: str, threshold_pct: float, cache_path: str) -> None:
+    """Build one threshold-cloud cache. Safe to run off the request thread."""
+    lock_path = cache_path + ".building"
+    try:
+        with open(lock_path, "w", encoding="utf-8") as f:
+            f.write(str(time.time()))
+        payload = _build_threshold_cloud_payload(filepath, threshold_pct)
+        tmp = cache_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        os.replace(tmp, cache_path)
+    except Exception:
+        log_path = cache_path + ".log"
+        try:
+            with open(log_path, "a", encoding="utf-8") as log:
+                traceback.print_exc(file=log)
+        except OSError:
+            pass
+    finally:
+        try:
+            os.remove(lock_path)
+        except OSError:
+            pass
+
+
 def _warm_cloud_cache_async(filepath: str, threshold_pct: float = 99.96) -> None:
-    """Spawn a detached subprocess to build the cloud cache (threads die on gunicorn)."""
+    """Kick off a cloud-cache build in the background."""
     cache_path = _cloud_cache_path(filepath, threshold_pct)
     lock_path = cache_path + ".building"
     if os.path.isfile(cache_path) or os.path.isfile(lock_path):
+        return
+
+    # A thread is enough on the desktop: there is no gunicorn worker recycling to
+    # kill it, and a frozen build has no interpreter to re-invoke as a subprocess.
+    if local_mode.is_local_mode():
+        threading.Thread(
+            target=_build_cloud_cache_to,
+            args=(filepath, threshold_pct, cache_path),
+            daemon=True,
+        ).start()
         return
 
     script = os.path.join(os.path.dirname(os.path.dirname(__file__)), "warm_cloud.py")

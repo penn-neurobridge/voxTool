@@ -17,6 +17,15 @@ web/backend/cloud_caches/
 web/backend/annotations/*.json
 # Demo / teaching annotation (redact before any public release)
 !web/backend/annotations/example.json
+# Desktop app
+desktop/node_modules/
+desktop/dist/
+desktop/resources/
+desktop/.venv-build/
+desktop/.dist-backend/
+web/backend/build/
+web/backend/dist/
+
 terraform/terraform.tfvars
 terraform/*.tfstate
 terraform/*.tfstate.*

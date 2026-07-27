@@ -7,6 +7,10 @@ import ThresholdCloudViewer from "./components/ThresholdCloudViewer";
 
 const API = process.env.REACT_APP_API_URL || "";
 
+/** Electron preload bridge — absent in the browser/cloud build. */
+const DESKTOP = typeof window !== "undefined" ? window.voxtoolDesktop : undefined;
+const IS_DESKTOP = !!DESKTOP?.isDesktop;
+
 /** Euclidean distance in mm (RAS). */
 function distMm(p, q) {
   const dR = p.R - q.R;
@@ -129,7 +133,10 @@ export default function App() {
   const handleScanDelete = useCallback(
     async (filename) => {
       if (!filename) return;
-      if (!window.confirm(`Remove "${filename}" from the server?`)) return;
+      const prompt = IS_DESKTOP
+        ? `Close "${filename}"? Your file on disk is not deleted.`
+        : `Remove "${filename}" from the server?`;
+      if (!window.confirm(prompt)) return;
       try {
         const res = await fetch(
           `${API}/api/scans/${encodeURIComponent(filename)}`,
@@ -149,6 +156,46 @@ export default function App() {
     },
     [pickerSelected, scanFilename]
   );
+
+  /** Desktop: register a scan by absolute path and read it where it already lives. */
+  const openScanAtPath = useCallback(async (absPath) => {
+    if (!absPath) return;
+    setPickerError("");
+    setUploadingScan(true);
+    try {
+      const res = await fetch(`${API}/api/scans/open_local`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: absPath }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `Could not open scan (${res.status})`);
+      }
+      setScanList((prev) =>
+        prev.includes(data.filename) ? prev : [data.filename, ...prev]
+      );
+      setPickerSelected(data.filename);
+      setScanFilename(data.filename);
+      setShowPicker(false);
+      setThresholdStatus({
+        tone: "ok",
+        text: `Opened ${data.filename} (${data.size_mb} MB) from ${data.path}`,
+      });
+    } catch (err) {
+      console.error("openScanAtPath:", err);
+      setPickerError(`Could not open scan: ${err.message || err}`);
+      setShowPicker(true);
+    } finally {
+      setUploadingScan(false);
+    }
+  }, []);
+
+  const pickScanFromDisk = useCallback(async () => {
+    if (!IS_DESKTOP) return;
+    const p = await DESKTOP.pickScan();
+    if (p) await openScanAtPath(p);
+  }, [openScanAtPath]);
 
   const handleScanUpload = useCallback(
     async (file) => {
@@ -661,6 +708,17 @@ export default function App() {
     loadFileInputRef.current?.click();
   }, [scanFilename, contacts.length, leads.length]);
 
+  // Native File menu (desktop only) drives the same handlers as the in-app buttons.
+  useEffect(() => {
+    if (!IS_DESKTOP) return undefined;
+    const unsubscribe = [
+      DESKTOP.onOpenScan((absPath) => openScanAtPath(absPath)),
+      DESKTOP.onSaveCoordinates(() => saveAnnotations()),
+      DESKTOP.onLoadCoordinates(() => loadAnnotations()),
+    ];
+    return () => unsubscribe.forEach((off) => off && off());
+  }, [openScanAtPath, saveAnnotations, loadAnnotations]);
+
   const onAnnotationFileSelected = useCallback(
     async (e) => {
       const file = e.target.files?.[0];
@@ -1122,7 +1180,7 @@ export default function App() {
                 className="btn btn-primary"
                 onClick={openScanPicker}
               >
-                Load / upload scan
+                {IS_DESKTOP ? "Open scan" : "Load / upload scan"}
               </button>
             </div>
           </div>
@@ -1154,30 +1212,44 @@ export default function App() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Load a CT Scan</h2>
             <p style={{ color: "var(--text-secondary)", marginTop: 0 }}>
-              Upload the NIfTI (.nii / .nii.gz) you want to work on. AWS accepts
-              files up to ~150 MB.
+              {IS_DESKTOP
+                ? "Choose the NIfTI (.nii / .nii.gz) you want to work on. It is read " +
+                  "directly from where it sits on your disk — nothing is copied or uploaded."
+                : "Upload the NIfTI (.nii / .nii.gz) you want to work on. AWS accepts " +
+                  "files up to ~150 MB."}
             </p>
             <div
               className="modal-actions modal-actions-scan"
               style={{ marginBottom: "1rem" }}
             >
-              <label
-                className="btn btn-primary"
-                style={{ cursor: uploadingScan ? "wait" : "pointer" }}
-              >
-                {uploadingScan ? "Uploading…" : "Upload .nii / .nii.gz"}
-                <input
-                  type="file"
-                  accept=".nii,.gz,application/gzip"
-                  style={{ display: "none" }}
+              {IS_DESKTOP ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
                   disabled={uploadingScan}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleScanUpload(f);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+                  onClick={pickScanFromDisk}
+                >
+                  {uploadingScan ? "Opening…" : "Open scan from disk…"}
+                </button>
+              ) : (
+                <label
+                  className="btn btn-primary"
+                  style={{ cursor: uploadingScan ? "wait" : "pointer" }}
+                >
+                  {uploadingScan ? "Uploading…" : "Upload .nii / .nii.gz"}
+                  <input
+                    type="file"
+                    accept=".nii,.gz,application/gzip"
+                    style={{ display: "none" }}
+                    disabled={uploadingScan}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleScanUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
             </div>
             {pickerError && (
               <p style={{ color: "#f07178", fontSize: "0.9rem" }}>{pickerError}</p>
@@ -1186,7 +1258,9 @@ export default function App() {
               <p style={{ color: "var(--text-secondary)" }}>Loading scan list…</p>
             ) : scanList.length === 0 ? (
               <p style={{ color: "var(--text-secondary)" }}>
-                No scans uploaded on this server yet.
+                {IS_DESKTOP
+                  ? "No scans opened yet."
+                  : "No scans uploaded on this server yet."}
               </p>
             ) : (
               <>
@@ -1197,7 +1271,9 @@ export default function App() {
                     marginBottom: "0.5rem",
                   }}
                 >
-                  Already on this server (click to select, × to remove):
+                  {IS_DESKTOP
+                    ? "Recently opened (click to select, × to close):"
+                    : "Already on this server (click to select, × to remove):"}
                 </p>
                 <ul className="scan-list">
                   {scanList.map((s) => (

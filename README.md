@@ -2,8 +2,59 @@
 
 Electrode contact localization on post-implant CT. This repo includes:
 
-1. **Desktop (legacy)** — Qt / `launch_pyloc.py`
+1. **Desktop app (current)** — the cloud app packaged to run entirely offline (`desktop/`)
 2. **Cloud web app** — React frontend + Flask API on AWS (Slice view + Threshold cloud)
+3. **Desktop (legacy)** — the original Qt / Mayavi tool, `launch_pyloc.py`
+
+## Desktop app (offline)
+
+Same tool as the cloud version — same picking, snapping, interpolation and
+export — but everything runs on your own machine. **No scan data leaves the
+computer:** the app binds to loopback only and makes no outbound requests.
+
+Use this build for any identifiable or otherwise restricted imaging.
+
+### Install
+
+Download the installer for your platform from the repository's
+[Releases](../../releases) page, or from the artifacts of a
+**Build desktop app** run under the Actions tab.
+
+| Platform | File |
+| -------- | ---- |
+| macOS (Apple Silicon) | `VoxTool-<version>-arm64.dmg` |
+| macOS (Intel) | `VoxTool-<version>.dmg` |
+| Windows | `VoxTool Setup <version>.exe` |
+
+**The builds are currently unsigned**, so the OS will warn you on first launch:
+
+- **macOS** — the app is "damaged" or "from an unidentified developer". Right-click
+  the app in Applications, choose **Open**, then **Open** again. Only needed once.
+  If macOS refuses outright, run `xattr -dr com.apple.quarantine /Applications/VoxTool.app`.
+- **Windows** — SmartScreen shows a blue "Windows protected your PC" box. Click
+  **More info** → **Run anyway**.
+
+Getting rid of these warnings needs an Apple Developer certificate (~$99/yr) and
+a Windows code-signing certificate; see `desktop/README.md`.
+
+### Using it
+
+1. **Open Scan…** (`Ctrl/Cmd-O`) and choose a `.nii` / `.nii.gz`. It is read
+   **in place** — the file is never copied, and there is no size limit.
+2. Switch to **Threshold cloud**, adjust the CT threshold percentile if needed,
+   and pick contacts on the bright metal cloud.
+3. **Define leads**, then submit or interpolate contacts.
+4. **Save Coordinates…** (`Ctrl/Cmd-S`) writes a legacy-compatible
+   `voxel_coordinates.json` wherever you choose.
+5. **Load Coordinates…** (`Ctrl/Cmd-Shift-O`) restores a previous session.
+
+Derived data (the cached threshold cloud) is written to the per-user app folder,
+never beside your scan — **File → Open App Data Folder** reveals it. Removing a
+scan from the list only closes it; your file on disk is untouched.
+
+### Building it yourself
+
+See [`desktop/README.md`](desktop/README.md).
 
 ## Cloud demo (v1)
 
@@ -25,7 +76,13 @@ Slice view (**NiiVue**) supports window presets (**Bone / Soft / Electrodes / Au
 
 ### Notes for multi-user demos
 
-Right now everyone shares **one** cloud deployment: the same scan list and API. That is normal for an early shared demo; scans are stored in a shared S3 bucket. Coordinate JSON files saved with **Save as…** live on each user’s machine (private). See “Shared instance” below if you want per-lab isolation later.
+> **The cloud deployment has no authentication.** Everyone shares one instance,
+> and anyone with the URL can list and download every scan that has been
+> uploaded to it. Treat it as a public demo and upload only de-identified data.
+> Use the offline desktop app for anything restricted.
+
+Scans live in a shared S3 bucket. Coordinate JSON files saved with **Save as…**
+stay on each user's own machine. Per-user accounts and isolation are planned.
 
 ---
 
