@@ -18,11 +18,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          # Runner labels are pinned, not `macos-latest`, so a GitHub image
+          # rotation cannot silently change what we ship. They do need bumping
+          # when an image retires: macos-13 died 2025-12-04 and macos-14 entered
+          # brownouts 2026-07-06, which is what broke both Mac jobs.
+          - os: macos-15
             label: macOS (Apple Silicon)
             artifact: voxtool-macos-arm64
             builder_args: --mac --arm64
-          - os: macos-13
+          # The last x86_64 macOS runner GitHub offers; retires August 2027.
+          - os: macos-15-intel
             label: macOS (Intel)
             artifact: voxtool-macos-x64
             builder_args: --mac --x64
