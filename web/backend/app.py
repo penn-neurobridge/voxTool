@@ -46,7 +46,8 @@ def _static_dir():
 
 
 def create_app():
-    app = Flask(__name__)
+    # Flask's built-in /static route would shadow serve_ui and 404 the CRA bundle.
+    app = Flask(__name__, static_folder=None)
     CORS(app, origins=_cors_origins())
 
     app.config["DATA_DIR"] = os.path.join(BASE_DIR, "data")
