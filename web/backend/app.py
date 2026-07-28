@@ -24,14 +24,23 @@ def _static_dir():
     if override and os.path.isdir(override):
         return override
 
+    meipass = getattr(sys, "_MEIPASS", "")
+    # Frozen onedir (PyInstaller 6+): exe sits next to _internal/; older layouts
+    # keep datas beside the exe. Probe both so a packaging change cannot blank
+    # the UI with a black Electron window.
+    exe_dir = ""
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+
     candidates = [
-        # PyInstaller unpacks bundled data next to _MEIPASS.
-        os.path.join(getattr(sys, "_MEIPASS", BASE_DIR), "frontend"),
+        os.path.join(meipass, "frontend") if meipass else "",
         os.path.join(BASE_DIR, "frontend"),
+        os.path.join(exe_dir, "frontend") if exe_dir else "",
+        os.path.join(exe_dir, "_internal", "frontend") if exe_dir else "",
         os.path.join(os.path.dirname(BASE_DIR), "frontend", "build"),
     ]
     for path in candidates:
-        if os.path.isfile(os.path.join(path, "index.html")):
+        if path and os.path.isfile(os.path.join(path, "index.html")):
             return path
     return ""
 
@@ -60,6 +69,9 @@ def create_app():
     app.register_blueprint(scans_bp, url_prefix="/api/scans")
     app.register_blueprint(annotations_bp, url_prefix="/api/annotations")
 
+    static_dir = _static_dir()
+    app.config["STATIC_DIR"] = static_dir
+
     @app.route("/api/health")
     def health():
         commit = os.environ.get("RENDER_GIT_COMMIT") or os.environ.get("GITHUB_SHA") or "local"
@@ -69,10 +81,10 @@ def create_app():
                 "build": commit[:8],
                 "local": local_mode.is_local_mode(),
                 "data_dir": app.config["DATA_DIR"],
+                "ui": bool(static_dir),
+                "static_dir": static_dir or None,
             }
         )
-
-    static_dir = _static_dir()
 
     if static_dir:
         @app.route("/", defaults={"path": ""})
@@ -84,7 +96,12 @@ def create_app():
     else:
         @app.route("/")
         def root_health():
-            return "OK", 200
+            return (
+                "VoxTool backend is running, but the UI bundle was not found. "
+                "Reinstall or rebuild the desktop app.",
+                200,
+                {"Content-Type": "text/plain; charset=utf-8"},
+            )
 
     return app
 

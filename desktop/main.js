@@ -76,17 +76,65 @@ function createWindow(port) {
   });
 
   mainWindow.once("ready-to-show", () => mainWindow.show());
-  mainWindow.loadURL(`http://127.0.0.1:${port}/`);
+
+  const url = `http://127.0.0.1:${port}/`;
+  mainWindow.loadURL(url);
+
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_e, errorCode, errorDescription, validatedURL) => {
+      logLine(`did-fail-load ${errorCode} ${errorDescription} ${validatedURL}\n`);
+      dialog.showErrorBox(
+        "VoxTool could not load the interface",
+        `${errorDescription} (${errorCode})\n\nURL: ${validatedURL}\n\n` +
+          `Log: ${logFilePath()}`
+      );
+    }
+  );
+
+  // Blank window with only the Electron background usually means index.html
+  // loaded but the JS bundle 404'd. Surface that instead of a silent black screen.
+  mainWindow.webContents.on("did-finish-load", async () => {
+    try {
+      const info = await mainWindow.webContents.executeJavaScript(`({
+        title: document.title,
+        hasRoot: !!document.getElementById("root"),
+        rootKids: document.getElementById("root")?.childElementCount || 0,
+        scripts: [...document.scripts].map(s => s.src),
+        bodyText: (document.body?.innerText || "").slice(0, 200)
+      })`);
+      logLine(`ui-check ${JSON.stringify(info)}\n`);
+      if (info.hasRoot && info.rootKids === 0) {
+        setTimeout(async () => {
+          if (!mainWindow) return;
+          const again = await mainWindow.webContents.executeJavaScript(
+            `document.getElementById("root")?.childElementCount || 0`
+          );
+          if (again === 0) {
+            dialog.showErrorBox(
+              "VoxTool interface did not start",
+              "The window opened but the UI never rendered. This usually means " +
+                "the bundled frontend files are missing from the backend.\n\n" +
+                `Details are in:\n${logFilePath()}\n\n` +
+                "Also try Help → Backend Log."
+            );
+          }
+        }, 2500);
+      }
+    } catch (err) {
+      logLine(`ui-check failed: ${err.message}\n`);
+    }
+  });
 
   // Keep navigation inside the app; send anything external to the real browser.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+  mainWindow.webContents.setWindowOpenHandler(({ url: openUrl }) => {
+    shell.openExternal(openUrl);
     return { action: "deny" };
   });
-  mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (!url.startsWith(`http://127.0.0.1:${port}`)) {
+  mainWindow.webContents.on("will-navigate", (event, navUrl) => {
+    if (!navUrl.startsWith(`http://127.0.0.1:${port}`)) {
       event.preventDefault();
-      shell.openExternal(url);
+      shell.openExternal(navUrl);
     }
   });
 
@@ -97,16 +145,26 @@ function createWindow(port) {
 
 /** Native "Load Scan" dialog, mirroring the legacy PyQt entry point. */
 async function promptOpenScan() {
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: "Select CT scan",
-    properties: ["openFile"],
-    filters: [
-      { name: "NIfTI", extensions: ["nii", "nii.gz", "gz"] },
-      { name: "All files", extensions: ["*"] },
-    ],
-  });
-  if (canceled || !filePaths.length) return null;
-  return filePaths[0];
+  // Windows rejects extension strings that contain a dot (e.g. "nii.gz"), and
+  // can fail the dialog with no visible error. List each suffix separately.
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: "Select CT scan",
+      properties: ["openFile"],
+      filters: [
+        { name: "NIfTI", extensions: ["nii", "gz"] },
+        { name: "All files", extensions: ["*"] },
+      ],
+    });
+    if (canceled || !filePaths.length) return null;
+    return filePaths[0];
+  } catch (err) {
+    dialog.showErrorBox(
+      "Could not open file dialog",
+      String(err.message || err)
+    );
+    return null;
+  }
 }
 
 function buildMenu() {
@@ -246,6 +304,22 @@ async function bootstrap() {
       proc: backend,
       tail: () => backendLog.slice(-15).join(""),
     });
+    // Confirm the frozen backend actually has the React bundle. Without it the
+    // window is just the Electron background color (looks like a black screen).
+    try {
+      const res = await fetch(`http://127.0.0.1:${backendPort}/api/health`);
+      const health = await res.json();
+      logLine(`health ${JSON.stringify(health)}\n`);
+      if (health.ui === false) {
+        throw new Error(
+          "Backend started but the UI bundle is missing (health.ui=false). " +
+            "Rebuild the desktop app so the frontend is packaged into the backend."
+        );
+      }
+    } catch (err) {
+      if (String(err.message || err).includes("UI bundle")) throw err;
+      logLine(`post-health check: ${err.message}\n`);
+    }
     logLine("backend healthy; opening window\n");
     registerIpc();
     buildMenu();

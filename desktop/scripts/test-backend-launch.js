@@ -98,6 +98,9 @@ async function main() {
     });
     check("backend reports healthy", health.status === "ok");
     check("running in local mode", health.local === true);
+    if (packaged) {
+      check("UI bundle is packaged with the backend", health.ui === true, health.static_dir || "");
+    }
     check(
       "state kept in per-user app folder",
       typeof health.data_dir === "string" && !health.data_dir.includes("web/backend/data"),

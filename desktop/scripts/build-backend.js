@@ -99,7 +99,23 @@ function main() {
   }
   if (!isWin) fs.chmodSync(exePath, 0o755);
 
+  // PyInstaller 6 onedir puts datas under _internal/; older layouts keep them
+  // next to the exe. Either way the UI must be findable or Electron opens black.
+  const uiCandidates = [
+    path.join(STAGE_DIR, "frontend", "index.html"),
+    path.join(STAGE_DIR, "_internal", "frontend", "index.html"),
+  ];
+  const uiIndex = uiCandidates.find((p) => fs.existsSync(p));
+  if (!uiIndex) {
+    console.error(
+      "Frontend was not bundled into the frozen backend.\n" +
+        `Looked for:\n  ${uiCandidates.join("\n  ")}\n` +
+        `Contents of ${STAGE_DIR}:\n  ${fs.readdirSync(STAGE_DIR).join("\n  ")}`
+    );
+    process.exit(1);
+  }
   console.log(`\nBackend staged at ${STAGE_DIR}`);
+  console.log(`UI bundle at ${uiIndex}`);
 }
 
 main();
