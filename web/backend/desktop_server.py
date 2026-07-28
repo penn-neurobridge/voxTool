@@ -14,6 +14,10 @@ if getattr(sys, "frozen", False):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 os.environ.setdefault("VOXTOOL_LOCAL", "1")
+# The cloud deployment sets this (see terraform/backend.tf). Matching it keeps
+# both environments on the same threshold-cloud code path — in-RAM volume rather
+# than mmap'd z-slabs — so snap and interpolate agree with the web app.
+os.environ.setdefault("ENABLE_VOLUME_WARM", "1")
 
 from app import create_app  # noqa: E402
 

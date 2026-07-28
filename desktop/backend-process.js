@@ -72,6 +72,9 @@ function backendEnv(port, extra = {}, { packaged = false } = {}) {
   const env = {
     ...process.env,
     VOXTOOL_LOCAL: "1",
+    // The cloud sets this; matching it keeps both on the same threshold-cloud
+    // code path so snap and interpolate agree with the web app.
+    ENABLE_VOLUME_WARM: "1",
     PORT: String(port),
     FLASK_DEBUG: "0",
     PYTHONUNBUFFERED: "1",

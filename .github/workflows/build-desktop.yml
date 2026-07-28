@@ -86,3 +86,81 @@ jobs:
             desktop/dist/*.zip
             desktop/dist/*.exe
             desktop/dist/*.AppImage
+
+  # Actions artifacts expire and require a GitHub login to download. A release
+  # is public and permanent, so that is what we point people at. Only runs for
+  # v* tags, and only if every platform built — a release missing an installer
+  # is worse than no release.
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download every platform's installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish to the Releases page
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t files < <(find artifacts -type f \
+            \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' \) | sort)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No installers were produced; refusing to publish an empty release." >&2
+            exit 1
+          fi
+
+          printf 'Attaching:\n'
+          printf '  %s\n' "${files[@]}"
+
+          cat > notes.md <<'EOF'
+          VoxTool runs entirely on your own machine. Scans are read in place from
+          your disk and nothing is uploaded anywhere.
+
+          ### Which file do I want?
+
+          | Your computer | Download |
+          | --- | --- |
+          | Windows | the `.exe` installer |
+          | Mac with Apple Silicon (M1/M2/M3/M4) | the `arm64.dmg` |
+          | Mac with an Intel chip | the `.dmg` without `arm64` in the name |
+
+          Not sure which Mac you have? Apple menu > About This Mac.
+
+          ### The builds are not code-signed
+
+          We do not have an Apple or Microsoft signing certificate yet, so each OS
+          will warn you the first time.
+
+          **macOS** — dragging VoxTool to Applications and double-clicking will say
+          the app is damaged or from an unidentified developer. Instead, right-click
+          the app and choose **Open**, then **Open** again in the dialog. You only do
+          this once. If macOS still refuses, run:
+
+          ```
+          xattr -cr /Applications/VoxTool.app
+          ```
+
+          **Windows** — SmartScreen shows a blue "Windows protected your PC" screen.
+          Click **More info**, then **Run anyway**.
+
+          ### Prefer to run from source?
+
+          See the "Run from source" section of the README. It does exactly the same
+          things as these installers.
+          EOF
+
+          gh release create "$TAG" \
+            --title "VoxTool $TAG" \
+            --notes-file notes.md \
+            "${files[@]}"

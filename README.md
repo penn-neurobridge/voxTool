@@ -2,6 +2,12 @@
 
 Electrode contact localization on post-implant CT.
 
+### [Download VoxTool for macOS or Windows →](../../releases/latest)
+
+Runs fully offline; your scans never leave your computer. First launch shows an
+"unidentified developer" or SmartScreen warning because the builds are not yet
+code-signed — [how to get past it](#install).
+
 There are three ways to run the current tool, and they are **the same program** —
 one React interface and one Flask backend, packaged three ways. Picking, snapping,
 interpolation and export are byte-for-byte the same code in all three, so a
