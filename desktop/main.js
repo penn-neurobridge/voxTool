@@ -284,6 +284,9 @@ async function bootstrap() {
       isDev,
       projectRoot: PROJECT_ROOT,
       resourcesPath: process.resourcesPath,
+      staticDir: isDev
+        ? undefined
+        : path.join(process.resourcesPath, "ui"),
     });
 
     backend.stdout?.on("data", (d) => logLine(d.toString()));
@@ -316,9 +319,38 @@ async function bootstrap() {
             "Rebuild the desktop app so the frontend is packaged into the backend."
         );
       }
+
+      // Prove the JS bundle is reachable and is actually JavaScript. A hang or
+      // SPA HTML fallback here is exactly what produced the black window.
+      const home = await fetch(`http://127.0.0.1:${backendPort}/`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      const html = await home.text();
+      const scriptMatch = html.match(/\/static\/js\/main\.[^"']+\.js/);
+      if (!scriptMatch) {
+        throw new Error("UI index.html has no main.*.js script tag.");
+      }
+      const jsUrl = `http://127.0.0.1:${backendPort}${scriptMatch[0]}`;
+      logLine(`fetching UI bundle ${jsUrl}\n`);
+      const jsRes = await fetch(jsUrl, { signal: AbortSignal.timeout(30_000) });
+      const sample = (await jsRes.text()).slice(0, 80);
+      logLine(`UI bundle HTTP ${jsRes.status}, starts: ${sample.replace(/\s+/g, " ")}\n`);
+      if (!jsRes.ok) {
+        throw new Error(`UI JavaScript missing (${jsRes.status} for ${scriptMatch[0]}).`);
+      }
+      if (sample.includes("<!DOCTYPE") || sample.includes("<html")) {
+        throw new Error(
+          "UI JavaScript URL returned HTML instead of JS (bad SPA fallback)."
+        );
+      }
     } catch (err) {
-      if (String(err.message || err).includes("UI bundle")) throw err;
+      if (
+        /UI bundle|UI index|UI JavaScript|bad SPA/.test(String(err.message || err))
+      ) {
+        throw err;
+      }
       logLine(`post-health check: ${err.message}\n`);
+      throw err;
     }
     logLine("backend healthy; opening window\n");
     registerIpc();

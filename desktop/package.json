@@ -1,7 +1,7 @@
 {
   "name": "voxtool-desktop",
   "productName": "VoxTool",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Local desktop build of VoxTool — CT electrode localization that runs entirely offline.",
   "main": "main.js",
   "license": "SEE LICENSE IN ../LICENSE.txt",
@@ -42,6 +42,13 @@
       {
         "from": "resources/backend",
         "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../web/frontend/build",
+        "to": "ui",
         "filter": [
           "**/*"
         ]

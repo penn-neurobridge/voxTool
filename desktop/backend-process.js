@@ -106,13 +106,15 @@ function backendEnv(port, extra = {}, { packaged = false } = {}) {
  * @param {boolean} opts.isDev  run from source vs the frozen executable
  * @param {string} [opts.projectRoot]     repo root (dev)
  * @param {string} [opts.resourcesPath]   Electron resourcesPath (packaged)
+ * @param {string} [opts.staticDir]       React build to serve (overrides frozen copy)
  */
-function startBackend({ port, isDev, projectRoot, resourcesPath }) {
+function startBackend({ port, isDev, projectRoot, resourcesPath, staticDir }) {
   if (isDev) {
     const backendDir = path.join(projectRoot, "web", "backend");
     const py = resolvePython(projectRoot);
     const env = backendEnv(port, {
       VOXTOOL_STATIC_DIR:
+        staticDir ||
         process.env.VOXTOOL_STATIC_DIR ||
         path.join(projectRoot, "web", "frontend", "build"),
     });
@@ -125,10 +127,21 @@ function startBackend({ port, isDev, projectRoot, resourcesPath }) {
   if (!fs.existsSync(exe)) {
     throw new Error(`Backend executable missing at ${exe}`);
   }
+
+  // Prefer the UI next to Electron (plain files on disk). Serving the big JS
+  // bundle out of the PyInstaller _internal tree was hanging on Windows, which
+  // left Electron with a black window (index.html loaded, React never ran).
+  const uiDir =
+    staticDir ||
+    path.join(resourcesPath, "ui");
+  const extra = {};
+  if (fs.existsSync(path.join(uiDir, "index.html"))) {
+    extra.VOXTOOL_STATIC_DIR = uiDir;
+  }
+
   return spawn(exe, [], {
     cwd: path.dirname(exe),
-    env: backendEnv(port, {}, { packaged: true }),
-    // Windows: avoid a console window flashing during the smoke test.
+    env: backendEnv(port, extra, { packaged: true }),
     windowsHide: true,
   });
 }

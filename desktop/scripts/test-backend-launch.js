@@ -82,6 +82,8 @@ async function main() {
     isDev: !packaged,
     projectRoot: PROJECT_ROOT,
     resourcesPath: path.join(PROJECT_ROOT, "desktop", "resources"),
+    // Same path Electron uses in the packaged app: plain files, not _internal.
+    staticDir: path.join(PROJECT_ROOT, "web", "frontend", "build"),
   });
   proc.stdout?.on("data", (d) => log.push(d.toString()));
   proc.stderr?.on("data", (d) => log.push(d.toString()));
@@ -114,6 +116,20 @@ async function main() {
       uiRes.ok && html.includes("<div id=\"root\">"),
       `HTTP ${uiRes.status}`
     );
+    const scriptMatch = html.match(/\/static\/js\/main\.[^"']+\.js/);
+    if (scriptMatch) {
+      const jsRes = await fetch(`${base}${scriptMatch[0]}`, {
+        signal: AbortSignal.timeout(30_000),
+      });
+      const head = (await jsRes.text()).slice(0, 60);
+      check(
+        "UI JavaScript bundle is downloadable",
+        jsRes.ok && !head.includes("<!DOCTYPE") && !head.includes("<html"),
+        `HTTP ${jsRes.status}`
+      );
+    } else {
+      check("UI JavaScript bundle is downloadable", false, "no script tag in index.html");
+    }
 
     // Open a scan in place, from a directory the app does not manage.
     const fixture = makeFixture(python);

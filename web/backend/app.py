@@ -90,8 +90,17 @@ def create_app():
         @app.route("/", defaults={"path": ""})
         @app.route("/<path:path>")
         def serve_ui(path):
-            if path and os.path.isfile(os.path.join(static_dir, path)):
-                return send_from_directory(static_dir, path)
+            if path:
+                full = os.path.normpath(os.path.join(static_dir, path))
+                # Stay inside the UI folder even if a request tries ".." segments.
+                if not full.startswith(os.path.normpath(static_dir) + os.sep) and full != os.path.normpath(static_dir):
+                    return ("Not found", 404)
+                if os.path.isfile(full):
+                    return send_from_directory(static_dir, path)
+                # Missing JS/CSS must 404 — falling back to index.html makes the
+                # browser try to execute HTML as JavaScript and leaves a blank UI.
+                if path.startswith("static/") or path.endswith((".js", ".css", ".map", ".woff", ".woff2", ".png", ".svg")):
+                    return ("Not found", 404)
             return send_from_directory(static_dir, "index.html")
     else:
         @app.route("/")
