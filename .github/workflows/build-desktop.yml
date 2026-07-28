@@ -119,6 +119,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          # This job only downloads artifacts, so there is no checkout and no
+          # git remote for gh to read the repository from. Without this it exits
+          # before reaching the API: "fatal: not a git repository".
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
