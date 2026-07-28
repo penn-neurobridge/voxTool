@@ -73,6 +73,11 @@ jobs:
         working-directory: desktop
         run: node scripts/test-backend-launch.js --packaged
 
+      # The arch below is what actually selects it. Do not add an `arch` list to
+      # the mac target in package.json: naming architectures there pins them, so
+      # --arm64 stops narrowing anything and both Macs build concurrently. Both
+      # DMGs then mount a volume named "VoxTool <version>", the second lands on
+      # "... 1", and the loser dies looking for its background image.
       - name: Package application
         working-directory: desktop
         env:
