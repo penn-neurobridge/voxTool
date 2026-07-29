@@ -67,11 +67,13 @@ a Windows code-signing certificate; see `desktop/README.md`.
 
 1. **Open Scan…** (`Ctrl/Cmd-O`) and choose a `.nii` / `.nii.gz`. It is read
    **in place** — the file is never copied, and there is no size limit.
-2. Switch to **Threshold cloud**, adjust the CT threshold percentile if needed,
-   and pick contacts on the bright metal cloud.
+2. Switch to **Electrode View**, adjust the CT threshold percentile if needed,
+   and pick contacts on the bright metal cloud. This is the easiest mode for
+   annotating; picks made here also show up on the slices in the lead's colour.
 3. **Define leads**, then submit or interpolate contacts.
 4. **Save Coordinates…** (`Ctrl/Cmd-S`) writes a legacy-compatible
-   `voxel_coordinates.json` wherever you choose.
+   `voxel_coordinates.json` or `voxel_coordinates.txt` wherever you choose —
+   pick the extension in the save dialog.
 5. **Load Coordinates…** (`Ctrl/Cmd-Shift-O`) restores a previous session.
 
 Derived data (the cached threshold cloud) is written to the per-user app folder,
@@ -136,12 +138,22 @@ Live site (AWS CloudFront):
 
 1. Open the app URL above.
 2. **Load scan** — upload a NIfTI (`.nii` / `.nii.gz`) or pick one already on the server.
-3. Switch to **Threshold cloud** — adjust CT threshold (%ile) if needed, then pick contacts on the bright metal cloud.
+3. Switch to **Electrode View** — adjust CT threshold (%ile) if needed, then pick contacts on the bright metal cloud.
 4. **Define leads** → submit / interpolate contacts as needed.
-5. **Save as…** — exports a `voxel_coordinates.json` to your computer (legacy-compatible).
-6. **Load coordinates** — reopen that JSON later to restore annotations on the same scan.
+5. **Save as…** — exports `voxel_coordinates.json` or `voxel_coordinates.txt` to your computer (both legacy-compatible).
+6. **Load coordinates** — reopen either file later to restore annotations on the same scan.
 
 Slice view (**NiiVue**) supports window presets (**Bone / Soft / Electrodes / Auto**) and layout (**4-up / A / C / S / 3D**).
+
+In a single plane (**A / C / S**) a slice navigator appears above the image with
+a slider, prev/next buttons, and a `Axial slice 122 / 242` readout. The mouse
+wheel and `↑`/`↓` step it too. Clicking only moves the crosshair *within* the
+plane you clicked — it cannot change that plane's own slice, which is why 4-up
+updates the other two panes but never the one under your cursor.
+
+Contact markers clip to the slice you are on rather than floating over every
+slice, and show through the skull in the 3D render so a whole implant is visible
+at once.
 
 ### Notes for multi-user demos
 
@@ -221,6 +233,16 @@ Infra lives under `terraform/` (dev: S3 + CloudFront + Elastic Beanstalk).
 | Delete (contact panel)| Delete |
 | Delete (lead definition window)| Delete |
 | Confirm (lead definition window) | Enter |
+
+### Viewer keys (desktop and cloud)
+
+| Action | Key |
+| ------ | --- |
+| Submit pending contact | S |
+| Cancel pending contact | Esc |
+| Show / hide the sidebar | F |
+| 4-up / Axial / Coronal / Sagittal / 3D | 0 / 1 / 2 / 3 / 4 |
+| Next / previous slice (single plane) | ↑ / ↓ (or PageUp / PageDown) |
 
 ## Other notes
 
