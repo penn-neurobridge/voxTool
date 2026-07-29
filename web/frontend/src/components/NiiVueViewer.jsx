@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Niivue } from "@niivue/niivue";
+import { LEAD_PALETTE_HEX, leadColormap } from "../leadColors";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -11,16 +12,26 @@ function contactLabelSortKey(label) {
 }
 
 function buildContactsConnectome(contacts, leads) {
-  const leadIdx = (name) =>
-    Math.max(0, leads.findIndex((l) => l.name === name));
-  const nodes = contacts.map((c) => ({
-    name: `${c.lead}${c.label}`,
-    x: c.coord?.R ?? 0,
-    y: c.coord?.A ?? 0,
-    z: c.coord?.S ?? 0,
-    colorValue: leadIdx(c.lead),
-    sizeValue: 1,
-  }));
+  const leadIdx = (name) => {
+    const i = leads.findIndex((l) => l.name === name);
+    return Math.max(0, i);
+  };
+  const nodes = contacts
+    .filter((c) => c.coord)
+    .map((c) => ({
+      name: `${c.lead}${c.label}`,
+      x: c.coord.R,
+      y: c.coord.A,
+      z: c.coord.S,
+      colorValue: leadIdx(c.lead),
+      sizeValue: 1,
+    }));
+
+  // Rebuild index map after filter so edge indices stay valid.
+  const indexByKey = new Map();
+  contacts.forEach((c, i) => {
+    if (c.coord) indexByKey.set(i, indexByKey.size);
+  });
 
   const edges = [];
   const byLead = new Map();
@@ -29,7 +40,7 @@ function buildContactsConnectome(contacts, leads) {
     const n = contactLabelSortKey(c.label);
     if (!Number.isFinite(n)) return;
     if (!byLead.has(c.lead)) byLead.set(c.lead, []);
-    byLead.get(c.lead).push({ i, n });
+    byLead.get(c.lead).push({ i: indexByKey.get(i), n });
   });
   for (const [leadName, arr] of byLead) {
     arr.sort((a, b) => a.n - b.n);
@@ -43,21 +54,22 @@ function buildContactsConnectome(contacts, leads) {
     }
   }
 
-  const maxLeadIdx = Math.max(1, leads.length - 1);
+  const maxLeadIdx = Math.max(LEAD_PALETTE_HEX.length - 1, 1);
   return {
     name: "contacts",
     nodes,
     edges,
-    nodeColormap: "warm",
-    nodeColormapNegative: "winter",
+    nodeColormap: "voxtool-leads",
+    nodeColormapNegative: "voxtool-leads",
     nodeMinColor: 0,
     nodeMaxColor: maxLeadIdx,
-    nodeScale: 2.0,
-    edgeColormap: "warm",
-    edgeColormapNegative: "winter",
+    // Larger than before so Soft/Bone windows still show markers clearly.
+    nodeScale: 3.2,
+    edgeColormap: "voxtool-leads",
+    edgeColormapNegative: "voxtool-leads",
     edgeMin: 0,
     edgeMax: maxLeadIdx,
-    edgeScale: 1.25,
+    edgeScale: 1.5,
     legendLineThickness: 0,
   };
 }
@@ -71,19 +83,18 @@ function buildPreviewConnectome(coord, label) {
         x: coord.R,
         y: coord.A,
         z: coord.S,
-        colorValue: 1,
-        sizeValue: 1.4,
+        colorValue: 7, // orange-ish in the shared palette
+        sizeValue: 1.5,
       },
     ],
     edges: [],
-    // Yellow-ish: use 'warm' min/max so colorValue 1 maps to bright yellow
-    nodeColormap: "warm",
-    nodeColormapNegative: "winter",
+    nodeColormap: "voxtool-leads",
+    nodeColormapNegative: "voxtool-leads",
     nodeMinColor: 0,
-    nodeMaxColor: 1,
-    nodeScale: 2.5,
-    edgeColormap: "warm",
-    edgeColormapNegative: "winter",
+    nodeMaxColor: Math.max(LEAD_PALETTE_HEX.length - 1, 1),
+    nodeScale: 3.6,
+    edgeColormap: "voxtool-leads",
+    edgeColormapNegative: "voxtool-leads",
     edgeMin: 2,
     edgeMax: 6,
     edgeScale: 1,
@@ -112,6 +123,7 @@ export default function NiiVueViewer({
   snapRadius = 3,
   snapThresholdPct = 99.96,
   showRasTags = true,
+  active = true,
 }) {
   const canvasRef = useRef(null);
   const nvRef = useRef(null);
@@ -119,6 +131,10 @@ export default function NiiVueViewer({
   const previewMeshRef = useRef(null);
   const snapTimerRef = useRef(null);
   const snapAbortRef = useRef(null);
+  const volumeReadyRef = useRef(false);
+  const contactsRef = useRef(contacts);
+  const leadsRef = useRef(leads);
+  const pendingRef = useRef(pendingContact);
 
   const onLocationChangeRef = useRef(onLocationChange);
   useEffect(() => {
@@ -139,6 +155,62 @@ export default function NiiVueViewer({
     snapThresholdRef.current = snapThresholdPct;
   }, [snapThresholdPct]);
 
+  useEffect(() => {
+    contactsRef.current = contacts;
+  }, [contacts]);
+  useEffect(() => {
+    leadsRef.current = leads;
+  }, [leads]);
+  useEffect(() => {
+    pendingRef.current = pendingContact;
+  }, [pendingContact]);
+
+  const rebuildMarkers = () => {
+    const nv = nvRef.current;
+    if (!nv || !volumeReadyRef.current || !nv.volumes?.length) return;
+
+    if (markerMeshRef.current) {
+      try {
+        nv.removeMesh(markerMeshRef.current);
+      } catch (e) {}
+      markerMeshRef.current = null;
+    }
+    if (previewMeshRef.current) {
+      try {
+        nv.removeMesh(previewMeshRef.current);
+      } catch (e) {}
+      previewMeshRef.current = null;
+    }
+
+    const cts = contactsRef.current || [];
+    const lds = leadsRef.current || [];
+    if (cts.length) {
+      try {
+        const mesh = nv.loadConnectomeAsMesh(buildContactsConnectome(cts, lds));
+        mesh.colorbarVisible = false;
+        nv.addMesh(mesh);
+        markerMeshRef.current = mesh;
+      } catch (err) {
+        console.warn("contact mesh build failed", err);
+      }
+    }
+
+    const pending = pendingRef.current;
+    if (pending?.coord) {
+      try {
+        const mesh = nv.loadConnectomeAsMesh(
+          buildPreviewConnectome(pending.coord, pending.label)
+        );
+        mesh.colorbarVisible = false;
+        nv.addMesh(mesh);
+        previewMeshRef.current = mesh;
+      } catch (err) {
+        console.warn("preview mesh build failed", err);
+      }
+    }
+    nv.drawScene?.();
+  };
+
   // Initialise NiiVue once.
   useEffect(() => {
     if (nvRef.current) return;
@@ -152,10 +224,10 @@ export default function NiiVueViewer({
       isHighResolutionCapable: false,
       isAntiAlias: false,
       isOrientCube: true,
-      // Connectome node names (RA1, …) otherwise become a fixed right-side
-      // legend panel that floats over every slice while you scroll.
+      // Connectome node names otherwise become a fixed right-side legend.
       showLegend: false,
     });
+    nv.addColormap("voxtool-leads", leadColormap());
     nv.attachToCanvas(canvasRef.current);
 
     let lastLocCall = 0;
@@ -173,8 +245,6 @@ export default function NiiVueViewer({
       };
       onLocationChangeRef.current?.(rawCoord);
 
-      // Short debounce so a rapid drag doesn't slam the backend, but the
-      // snap response feels near-instant after the click settles.
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
       if (snapAbortRef.current) snapAbortRef.current.abort();
       snapTimerRef.current = setTimeout(() => {
@@ -230,9 +300,8 @@ export default function NiiVueViewer({
   useEffect(() => {
     if (!scanFilename || !nvRef.current) return;
     const nv = nvRef.current;
+    volumeReadyRef.current = false;
     const url = `${API}/api/scans/${scanFilename}`;
-    // Use "gray" (not ct_skull): ct_skull bakes fixed HU min/max into the
-    // colormap, which made Bone/Soft/Electrodes/sliders look like no-ops.
     nv.loadVolumes([
       {
         url,
@@ -241,16 +310,12 @@ export default function NiiVueViewer({
         cal_max: calMax,
       },
     ]).then(() => {
-      // Matte volume (0): real volume look, cheaper than gradient lighting (0.4).
-      // Do NOT use negative values — that switches to the "cube split" slice shader.
       nv.setVolumeRenderIllumination(0);
       nv.setRenderAzimuthElevation(120, 10);
       nv.volScaleMultiplier = 1.0;
       nv.setSliceMM(true);
-      // Infinity draws the entire connectome on every 2D slice, so contacts
-      // appear to hover in fixed screen positions while you scroll. A few mm
-      // keeps a contact visible only near the slice it belongs on.
-      nv.setMeshThicknessOn2D(4);
+      // Finite thickness so markers only appear near their slice (not hovering).
+      nv.setMeshThicknessOn2D(6);
       nv.setClipPlaneThick(0.7);
       if (nv.volumes?.[0]) {
         nv.volumes[0].cal_min = calMin;
@@ -259,25 +324,22 @@ export default function NiiVueViewer({
       } else {
         nv.drawScene?.();
       }
+      volumeReadyRef.current = true;
+      // Remount/switch race: contacts may already exist before the volume was ready.
+      rebuildMarkers();
     });
-    // Intentionally omit calMin/calMax from deps — window changes are handled
-    // by the intensity effect below so we don't reload the whole volume.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanFilename]);
 
-  // Layout: switch which slice(s) NiiVue draws, and whether the 3D render
-  // pane is visible alongside the multiplanar grid.
   useEffect(() => {
     const nv = nvRef.current;
     if (!nv) return;
     const sliceType = LAYOUT_TO_SLICETYPE[layout] ?? 3;
     nv.setSliceType(sliceType);
-    // Only show the 3D render in the 4th tile when in multiplanar mode.
     nv.opts.multiplanarShowRender = layout === "multi" ? 1 : 0;
     nv.drawScene?.();
   }, [layout]);
 
-  // Intensity window — Bone/Soft/Electrodes/Auto + Min/Max sliders.
   useEffect(() => {
     const nv = nvRef.current;
     if (!nv || !nv.volumes || nv.volumes.length === 0) return;
@@ -298,7 +360,6 @@ export default function NiiVueViewer({
   useEffect(() => {
     const nv = nvRef.current;
     if (!nv) return;
-    // NiiVue exposes `opts` as read-only; use setters only (never assign nv.opts).
     if (typeof nv.setIsOrientationTextVisible === "function") {
       nv.setIsOrientationTextVisible(!!showRasTags);
     }
@@ -308,61 +369,21 @@ export default function NiiVueViewer({
     nv.drawScene?.();
   }, [showRasTags]);
 
-  // Committed contact markers.
   useEffect(() => {
-    const nv = nvRef.current;
-    if (!nv || !nv.volumes || nv.volumes.length === 0) return;
-    if (markerMeshRef.current) {
-      try {
-        nv.removeMesh(markerMeshRef.current);
-      } catch (e) {}
-      markerMeshRef.current = null;
-    }
-    if (!contacts || contacts.length === 0) {
-      nv.drawScene?.();
-      return;
-    }
-    try {
-      const mesh = nv.loadConnectomeAsMesh(
-        buildContactsConnectome(contacts, leads || [])
-      );
-      // Hide the colorbar strip (often just a lone "9") that connectome meshes
-      // otherwise draw on the right edge of the viewer.
-      mesh.colorbarVisible = false;
-      nv.addMesh(mesh);
-      markerMeshRef.current = mesh;
-      nv.drawScene?.();
-    } catch (err) {
-      console.warn("contact mesh build failed", err);
-    }
-  }, [contacts, leads]);
+    rebuildMarkers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contacts, leads, pendingContact]);
 
-  // Pending preview marker.
+  // Pane was hidden with visibility:hidden — force a redraw when shown again.
   useEffect(() => {
+    if (!active) return;
     const nv = nvRef.current;
-    if (!nv || !nv.volumes || nv.volumes.length === 0) return;
-    if (previewMeshRef.current) {
-      try {
-        nv.removeMesh(previewMeshRef.current);
-      } catch (e) {}
-      previewMeshRef.current = null;
-    }
-    if (!pendingContact || !pendingContact.coord) {
+    if (!nv) return;
+    requestAnimationFrame(() => {
+      nv.resizeListener?.();
       nv.drawScene?.();
-      return;
-    }
-    try {
-      const mesh = nv.loadConnectomeAsMesh(
-        buildPreviewConnectome(pendingContact.coord, pendingContact.label)
-      );
-      mesh.colorbarVisible = false;
-      nv.addMesh(mesh);
-      previewMeshRef.current = mesh;
-      nv.drawScene?.();
-    } catch (err) {
-      console.warn("preview mesh build failed", err);
-    }
-  }, [pendingContact]);
+    });
+  }, [active]);
 
   return (
     <div className="viewer-container">

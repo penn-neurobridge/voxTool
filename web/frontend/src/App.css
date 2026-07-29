@@ -44,6 +44,34 @@
   min-width: 0;
 }
 
+/* Keep both viewers mounted so annotations persist when switching tabs.
+   display:none would zero the WebGL canvas size; visibility+absolute keeps layout. */
+.viewer-stack {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.viewer-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.viewer-pane-hidden {
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.viewer-pane:not(.viewer-pane-hidden) {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
 .viewer-top-bar {
   flex-shrink: 0;
   padding: 8px 16px;

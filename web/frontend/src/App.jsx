@@ -1328,31 +1328,44 @@ export default function App() {
         )}
 
         {scanFilename ? (
-          viewerTab === "slices" ? (
-            <NiiVueViewer
-              scanFilename={scanFilename}
-              calMin={calMin}
-              calMax={calMax}
-              onLocationChange={handleLocationChange}
-              contacts={contacts}
-              leads={leads}
-              pendingContact={pendingContact}
-              layout={viewerLayout}
-              snapRadius={3}
-              snapThresholdPct={thresholdPct}
-              showRasTags={showRasTags}
-            />
-          ) : (
-            <ThresholdCloudViewer
-              scanFilename={scanFilename}
-              cloudThresholdPct={thresholdPct}
-              onCloudVoxelPick={handleCloudVoxelPick}
-              contacts={contacts}
-              leads={leads}
-              pendingContact={pendingContact}
-              selectedLead={selectedLead}
-            />
-          )
+          <div className="viewer-stack">
+            <div
+              className={`viewer-pane${
+                viewerTab === "slices" ? "" : " viewer-pane-hidden"
+              }`}
+            >
+              <NiiVueViewer
+                scanFilename={scanFilename}
+                calMin={calMin}
+                calMax={calMax}
+                onLocationChange={handleLocationChange}
+                contacts={contacts}
+                leads={leads}
+                pendingContact={pendingContact}
+                layout={viewerLayout}
+                snapRadius={3}
+                snapThresholdPct={thresholdPct}
+                showRasTags={showRasTags}
+                active={viewerTab === "slices"}
+              />
+            </div>
+            <div
+              className={`viewer-pane${
+                viewerTab === "cloud" ? "" : " viewer-pane-hidden"
+              }`}
+            >
+              <ThresholdCloudViewer
+                scanFilename={scanFilename}
+                cloudThresholdPct={thresholdPct}
+                onCloudVoxelPick={handleCloudVoxelPick}
+                contacts={contacts}
+                leads={leads}
+                pendingContact={pendingContact}
+                selectedLead={selectedLead}
+                active={viewerTab === "cloud"}
+              />
+            </div>
+          </div>
         ) : (
           <div className="empty-state">
             <div>

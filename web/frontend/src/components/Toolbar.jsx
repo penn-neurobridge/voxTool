@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from "react";
 
 const PRESETS = [
   { id: "bone", label: "Bone", min: 300, max: 1500 },
-  { id: "electrodes", label: "Electrodes", min: 1500, max: 3500 },
+  // Wider than a pure-metal window so skull context stays visible while
+  // electrodes still pop. Extreme 1500–3500 made the slices look empty.
+  { id: "electrodes", label: "Electrodes", min: 800, max: 3000 },
   { id: "soft", label: "Soft", min: -100, max: 200 },
 ];
 

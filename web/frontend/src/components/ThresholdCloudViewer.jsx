@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
+import { leadColorHex } from "../leadColors";
 
 const API = process.env.REACT_APP_API_URL || "";
+
+/**
+ * Dim anatomical context under the bright electrode cloud. High enough to show
+ * skull/leads structure, low enough that it doesn't drown the pickable metal.
+ */
+const CONTEXT_CLOUD_PCT = 97;
 
 const IS_DESKTOP =
   typeof window !== "undefined" && !!window.voxtoolDesktop?.isDesktop;
@@ -259,29 +266,6 @@ function selectDisplayedContact(pickMap, seedIndex, spacing, radiusMm = PICK_BAL
 /** Live pick highlight color — saturated magenta, matching the legacy `spring` tint. */
 const PICK_COLOR = 0xff1f7a;
 
-/** Distinct per-lead colors for submitted contacts. Index 0 (first lead) is green.
- *  Hues are spread apart for categorical separation and held near 45-55% lightness so
- *  they stay legible against the grey cloud without going neon. The magenta band is
- *  reserved for PICK_COLOR so a submitted contact never reads as the live pick. */
-const LEAD_PALETTE_HEX = [
-  0x1fb84c, // green
-  0x00a896, // teal
-  0x0e9bd6, // cyan
-  0x3b72e0, // blue
-  0x7a5ae0, // indigo
-  0xa347d6, // purple
-  0xd63b2f, // red
-  0xe07b1e, // orange
-  0xc9a21a, // gold
-  0x8faf1b, // olive
-];
-
-function leadColorHex(leadName, leads) {
-  const i = leads.findIndex((l) => l.name === leadName);
-  const idx = i >= 0 ? i : 0;
-  return LEAD_PALETTE_HEX[idx % LEAD_PALETTE_HEX.length];
-}
-
 /** Anatomical label colors matching the desktop tool (R/L red, A/P green, S/I blue). */
 const ORIENT_RED = 0xff4d4d;
 const ORIENT_GREEN = 0x4dd44d;
@@ -316,6 +300,7 @@ export default function ThresholdCloudViewer({
   leads,
   pendingContact,
   selectedLead,
+  active = true,
 }) {
   const wrapRef = useRef(null);
   const rendererRef = useRef(null);
@@ -323,6 +308,7 @@ export default function ThresholdCloudViewer({
   const cameraRef = useRef(null);
   const controlsRef = useRef(null);
   const pointsRef = useRef(null);
+  const contextPointsRef = useRef(null);
   const pickIndexToVoxelRef = useRef(null);
   const animationRef = useRef(null);
   const spacingRef = useRef([1, 1, 1]);
@@ -483,7 +469,74 @@ export default function ThresholdCloudViewer({
         spacing: sp,
       });
       cloudThrRef.current = data.intensity_threshold;
-      rebuildPoints(data.points || [], sp);
+      rebuildPoints(data.points || [], sp, {
+        role: "electrodes",
+        frameCamera: true,
+      });
+
+      // Dimmer context layer so the skull is readable under the metal cloud.
+      // Failure is non-fatal — electrode cloud alone still works for picking.
+      try {
+        const ctxPct = Math.min(CONTEXT_CLOUD_PCT, cloudThresholdPct - 0.5);
+        if (ctxPct >= 50) {
+          fetch(`${API}/api/scans/${scanFilename}/warm_cloud`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ threshold_pct: ctxPct }),
+            signal: AbortSignal.timeout(30_000),
+          }).catch(() => {});
+
+          for (let attempt = 0; attempt < 20; attempt++) {
+            const readyRes = await fetch(
+              `${API}/api/scans/${scanFilename}/cloud_ready?threshold_pct=${ctxPct}`,
+              { signal: AbortSignal.timeout(10_000) }
+            ).catch(() => null);
+            if (readyRes?.ok) {
+              const readyData = await readyRes.json().catch(() => ({}));
+              if (readyData.ready) break;
+            }
+            if (attempt === 0 || attempt % 4 === 0) {
+              fetch(`${API}/api/scans/${scanFilename}/threshold_cloud`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  threshold_pct: ctxPct,
+                  max_points: 200000,
+                  seed: 0,
+                }),
+                signal: AbortSignal.timeout(20_000),
+              }).catch(() => {});
+            }
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+
+          const ctxRes = await fetch(
+            `${API}/api/scans/${scanFilename}/threshold_cloud`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                threshold_pct: ctxPct,
+                max_points: 200000,
+                seed: 0,
+              }),
+              signal: AbortSignal.timeout(90_000),
+            }
+          );
+          if (ctxRes.ok) {
+            const ctxData = await ctxRes.json();
+            if (ctxData.points?.length) {
+              rebuildPoints(ctxData.points, sp, {
+                role: "context",
+                frameCamera: false,
+              });
+            }
+          }
+        }
+      } catch (ctxErr) {
+        console.warn("context cloud skipped:", ctxErr);
+      }
+
       setLoading(false);
     } catch (e) {
       console.error("threshold_cloud:", e);
@@ -502,18 +555,23 @@ export default function ThresholdCloudViewer({
     }
   }, [scanFilename, cloudThresholdPct]);
 
-  const rebuildPoints = (points, spacing) => {
+  const rebuildPoints = (points, spacing, opts = {}) => {
     const scene = sceneRef.current;
     if (!scene) return;
+    const role = opts.role || "electrodes";
+    const frameCamera = opts.frameCamera !== false;
     spacingRef.current = spacing || spacingRef.current;
 
-    if (pointsRef.current) {
-      scene.remove(pointsRef.current);
-      pointsRef.current.geometry.dispose();
-      pointsRef.current.material.dispose();
-      pointsRef.current = null;
+    const targetRef = role === "context" ? contextPointsRef : pointsRef;
+    if (targetRef.current) {
+      scene.remove(targetRef.current);
+      targetRef.current.geometry.dispose();
+      targetRef.current.material.dispose();
+      targetRef.current = null;
     }
-    pickIndexToVoxelRef.current = null;
+    if (role === "electrodes") {
+      pickIndexToVoxelRef.current = null;
+    }
 
     const n = points.length;
     if (n === 0) return;
@@ -523,44 +581,51 @@ export default function ThresholdCloudViewer({
     const sz = spacing[2] || 1;
 
     const positions = new Float32Array(n * 3);
-    const pickMap = new Array(n);
+    const pickMap = role === "electrodes" ? new Array(n) : null;
     for (let i = 0; i < n; i++) {
       const [vi, vj, vk] = points[i];
       positions[i * 3] = vi * sx;
       positions[i * 3 + 1] = vj * sy;
       positions[i * 3 + 2] = vk * sz;
-      pickMap[i] = [vi, vj, vk];
+      if (pickMap) pickMap[i] = [vi, vj, vk];
     }
-    pickIndexToVoxelRef.current = pickMap;
+    if (pickMap) pickIndexToVoxelRef.current = pickMap;
 
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
-    // Dimmer than the near-white it used to be, so the cloud reads as background
-    // rather than competing with the contacts. (What actually made contacts look
-    // pastel was this material being transparent and therefore drawn *over* them;
-    // the markers now join the transparent pass so they win.)
+    const isContext = role === "context";
     const mat = new THREE.PointsMaterial({
-      color: 0x8e9aa8,
-      size: Math.max(sx, sy, sz) * 1.5,
+      color: isContext ? 0x4a5668 : 0xc5d0de,
+      size: Math.max(sx, sy, sz) * (isContext ? 1.15 : 1.85),
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.8,
+      opacity: isContext ? 0.28 : 0.92,
+      depthWrite: false,
     });
 
     const pts = new THREE.Points(geom, mat);
+    pts.renderOrder = isContext ? 0 : 1;
     scene.add(pts);
-    pointsRef.current = pts;
+    targetRef.current = pts;
 
-    const box = new THREE.Box3().setFromBufferAttribute(geom.attributes.position);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    if (cameraRef.current && controlsRef.current) {
-      const size = box.getSize(new THREE.Vector3()).length();
-      const dist = Math.max(size * 1.2, 50);
-      cameraRef.current.position.set(center.x + dist * 0.5, center.y + dist * 0.4, center.z + dist);
-      controlsRef.current.target.copy(center);
-      controlsRef.current.update();
+    if (frameCamera && role === "electrodes") {
+      const box = new THREE.Box3().setFromBufferAttribute(
+        geom.attributes.position
+      );
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      if (cameraRef.current && controlsRef.current) {
+        const size = box.getSize(new THREE.Vector3()).length();
+        const dist = Math.max(size * 1.2, 50);
+        cameraRef.current.position.set(
+          center.x + dist * 0.5,
+          center.y + dist * 0.4,
+          center.z + dist
+        );
+        controlsRef.current.target.copy(center);
+        controlsRef.current.update();
+      }
     }
   };
 
@@ -570,7 +635,7 @@ export default function ThresholdCloudViewer({
     if (!wrap) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a10);
+    scene.background = new THREE.Color(0x12141c);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(55, wrap.clientWidth / wrap.clientHeight, 0.1, 100000);
@@ -757,6 +822,12 @@ export default function ThresholdCloudViewer({
         pointsRef.current.material.dispose();
         pointsRef.current = null;
       }
+      if (contextPointsRef.current) {
+        scene.remove(contextPointsRef.current);
+        contextPointsRef.current.geometry.dispose();
+        contextPointsRef.current.material.dispose();
+        contextPointsRef.current = null;
+      }
       const hi = scene.getObjectByName("component-highlight");
       if (hi) {
         hi.geometry.dispose();
@@ -793,6 +864,23 @@ export default function ThresholdCloudViewer({
   useEffect(() => {
     fetchCloud();
   }, [fetchCloud]);
+
+  // Hidden pane has zero client size for WebGL; refresh when shown again.
+  useEffect(() => {
+    if (!active) return;
+    const wrap = wrapRef.current;
+    const renderer = rendererRef.current;
+    const camera = cameraRef.current;
+    if (!wrap || !renderer || !camera) return;
+    requestAnimationFrame(() => {
+      const w = wrap.clientWidth;
+      const h = Math.max(wrap.clientHeight, 1);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      controlsRef.current?.handleResize?.();
+    });
+  }, [active]);
 
   // Anatomical axis directions (R/A/S/L/P/I) for orientation labels.
   useEffect(() => {
