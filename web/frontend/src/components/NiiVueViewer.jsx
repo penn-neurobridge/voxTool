@@ -239,9 +239,13 @@ export default function NiiVueViewer({
       sliceType: 3,
       multiplanarLayout: 2,
       multiplanarShowRender: 1,
-      isHighResolutionCapable: false,
-      isAntiAlias: false,
+      // Render at the display's true pixel density. Left off, a Retina Mac
+      // draws at 1x and upscales, which is what made the slices look soft.
+      isHighResolutionCapable: true,
+      isAntiAlias: true,
       isOrientCube: true,
+      // Breathing room between the 4-up tiles instead of butted edges.
+      multiplanarPadPixels: 4,
       // Connectome node names otherwise become a fixed right-side legend.
       showLegend: false,
     });
@@ -337,6 +341,10 @@ export default function NiiVueViewer({
       // Thin slice clipping so markers read as dots, not thick mesh chunks.
       nv.setMeshThicknessOn2D(2.5);
       nv.setClipPlaneThick(0.7);
+      // Contacts sit inside the head, so the volume render hides them: draw3D
+      // paints meshes once depth-tested, then again unoccluded at this alpha.
+      // Without it the 3D tile shows the skull but none of the annotations.
+      nv.opts.meshXRay = 0.55;
       if (nv.volumes?.[0]) {
         nv.volumes[0].cal_min = calMin;
         nv.volumes[0].cal_max = calMax;
