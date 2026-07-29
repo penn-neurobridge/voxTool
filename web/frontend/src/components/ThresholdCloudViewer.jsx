@@ -304,6 +304,7 @@ export default function ThresholdCloudViewer({
   const pointsRef = useRef(null);
   const pickIndexToVoxelRef = useRef(null);
   const animationRef = useRef(null);
+  const activeRef = useRef(active);
   const spacingRef = useRef([1, 1, 1]);
   const selectedLeadRef = useRef("");
   const onCloudPickRef = useRef(null);
@@ -700,6 +701,9 @@ export default function ThresholdCloudViewer({
 
     const loop = () => {
       animationRef.current = requestAnimationFrame(loop);
+      // Pause when the pane is hidden so we don't steal input or burn GPU
+      // while the user is in Slices mode.
+      if (!activeRef.current) return;
       controls.update();
       renderer.render(scene, camera);
     };
@@ -776,7 +780,11 @@ export default function ThresholdCloudViewer({
   }, [fetchCloud]);
 
   // Hidden pane has zero client size for WebGL; refresh when shown again.
+  // Also disable TrackballControls so it can't steal window key events.
   useEffect(() => {
+    activeRef.current = active;
+    const controls = controlsRef.current;
+    if (controls) controls.enabled = !!active;
     if (!active) return;
     const wrap = wrapRef.current;
     const renderer = rendererRef.current;

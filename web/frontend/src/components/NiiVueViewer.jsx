@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Niivue } from "@niivue/niivue";
-import { LEAD_PALETTE_HEX, leadColormap } from "../leadColors";
+import { leadColormap, leadIndex, leadLutIndex } from "../leadColors";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -12,10 +12,6 @@ function contactLabelSortKey(label) {
 }
 
 function buildContactsConnectome(contacts, leads) {
-  const leadIdx = (name) => {
-    const i = leads.findIndex((l) => l.name === name);
-    return Math.max(0, i);
-  };
   const nodes = contacts
     .filter((c) => c.coord)
     .map((c) => ({
@@ -23,7 +19,7 @@ function buildContactsConnectome(contacts, leads) {
       x: c.coord.R,
       y: c.coord.A,
       z: c.coord.S,
-      colorValue: leadIdx(c.lead),
+      colorValue: leadLutIndex(leadIndex(c.lead, leads)),
       sizeValue: 1,
     }));
 
@@ -44,7 +40,7 @@ function buildContactsConnectome(contacts, leads) {
   });
   for (const [leadName, arr] of byLead) {
     arr.sort((a, b) => a.n - b.n);
-    const cv = leadIdx(leadName);
+    const cv = leadLutIndex(leadIndex(leadName, leads));
     for (let k = 0; k < arr.length - 1; k++) {
       edges.push({
         first: arr[k].i,
@@ -54,27 +50,28 @@ function buildContactsConnectome(contacts, leads) {
     }
   }
 
-  const maxLeadIdx = Math.max(LEAD_PALETTE_HEX.length - 1, 1);
   return {
     name: "contacts",
     nodes,
     edges,
     nodeColormap: "voxtool-leads",
     nodeColormapNegative: "voxtool-leads",
+    // colorValue is already a 0..255 LUT index — see leadLutIndex().
     nodeMinColor: 0,
-    nodeMaxColor: maxLeadIdx,
-    // Larger than before so Soft/Bone windows still show markers clearly.
+    nodeMaxColor: 255,
     nodeScale: 3.2,
     edgeColormap: "voxtool-leads",
     edgeColormapNegative: "voxtool-leads",
     edgeMin: 0,
-    edgeMax: maxLeadIdx,
+    edgeMax: 255,
     edgeScale: 1.5,
     legendLineThickness: 0,
   };
 }
 
 function buildPreviewConnectome(coord, label) {
+  // Orange band in the shared palette (index 7).
+  const previewCv = leadLutIndex(7);
   return {
     name: "preview",
     nodes: [
@@ -83,7 +80,7 @@ function buildPreviewConnectome(coord, label) {
         x: coord.R,
         y: coord.A,
         z: coord.S,
-        colorValue: 7, // orange-ish in the shared palette
+        colorValue: previewCv,
         sizeValue: 1.5,
       },
     ],
@@ -91,12 +88,12 @@ function buildPreviewConnectome(coord, label) {
     nodeColormap: "voxtool-leads",
     nodeColormapNegative: "voxtool-leads",
     nodeMinColor: 0,
-    nodeMaxColor: Math.max(LEAD_PALETTE_HEX.length - 1, 1),
+    nodeMaxColor: 255,
     nodeScale: 3.6,
     edgeColormap: "voxtool-leads",
     edgeColormapNegative: "voxtool-leads",
-    edgeMin: 2,
-    edgeMax: 6,
+    edgeMin: 0,
+    edgeMax: 255,
     edgeScale: 1,
     legendLineThickness: 0,
   };
@@ -336,8 +333,18 @@ export default function NiiVueViewer({
     if (!nv) return;
     const sliceType = LAYOUT_TO_SLICETYPE[layout] ?? 3;
     nv.setSliceType(sliceType);
-    nv.opts.multiplanarShowRender = layout === "multi" ? 1 : 0;
-    nv.drawScene?.();
+    // Prefer setter if present — direct opts writes are unreliable across versions.
+    if (typeof nv.setMultiplanarShowRender === "function") {
+      nv.setMultiplanarShowRender(layout === "multi" ? 1 : 0);
+    } else {
+      nv.opts.multiplanarShowRender = layout === "multi" ? 1 : 0;
+    }
+    // 4-up → single pane changes the tile layout; without a resize the backbuffer
+    // / mouse coords stay tied to the old grid and scrolling feels "stuck".
+    requestAnimationFrame(() => {
+      nv.resizeListener?.();
+      nv.drawScene?.();
+    });
   }, [layout]);
 
   useEffect(() => {
