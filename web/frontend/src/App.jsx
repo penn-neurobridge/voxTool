@@ -19,24 +19,83 @@ function distMm(p, q) {
   return Math.sqrt(dR * dR + dA * dA + dS * dS);
 }
 
-/** Perpendicular distance from point p to the infinite line through a and b (mm). */
-function distPointToLineMm(p, a, b) {
-  const ux = b.R - a.R;
-  const uy = b.A - a.A;
-  const uz = b.S - a.S;
-  const vx = p.R - a.R;
-  const vy = p.A - a.A;
-  const vz = p.S - a.S;
-  const u2 = ux * ux + uy * uy + uz * uz;
-  if (u2 < 1e-8) return distMm(p, a);
-  const t = (vx * ux + vy * uy + vz * uz) / u2;
-  const px = a.R + t * ux;
-  const py = a.A + t * uy;
-  const pz = a.S + t * uz;
-  const dx = p.R - px;
-  const dy = p.A - py;
-  const dz = p.S - pz;
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+/** 1-based contact label → legacy lead_loc [row, col]. */
+function labelToLeadLoc(label, dimensions) {
+  const n = Math.max(1, parseInt(label, 10) || 1) - 1;
+  const dx = Math.max(1, dimensions?.[0] || 1);
+  const dy = Math.max(1, dimensions?.[1] || 1);
+  if (dx === 1) return [Math.min(n, dy - 1), 0];
+  if (dy === 1) return [0, Math.min(n, dx - 1)];
+  return [Math.floor(n / dx) % dy, n % dx];
+}
+
+/**
+ * Parse legacy voxel_coordinates.txt (tab-separated name x y z type "dx dy")
+ * into the same document shape buildExportDocument emits.
+ */
+function parseTxtCoordinates(text, scanFilename = "") {
+  const leadsOut = {};
+  const lines = String(text)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+  if (!lines.length) {
+    throw new Error("TXT file is empty.");
+  }
+  for (const line of lines) {
+    const parts = line.split(/\t+/);
+    if (parts.length < 4) {
+      throw new Error(
+        `Bad TXT line (need name + x y z): ${line.slice(0, 80)}`
+      );
+    }
+    const [name, xs, ys, zs, type = "D", dimsStr = "1 8"] = parts;
+    const m = String(name).match(/^([A-Za-z]+)(.+)$/);
+    if (!m) {
+      throw new Error(`Cannot split contact name into lead+label: ${name}`);
+    }
+    const leadName = m[1];
+    const label = m[2];
+    // Skip bipolar midpoints like LA1-LA2 for reload (annotation continuity).
+    if (String(label).includes("-")) continue;
+    const dimsParts = String(dimsStr).trim().split(/\s+/);
+    const dimensions = [
+      parseInt(dimsParts[0], 10) || 1,
+      parseInt(dimsParts[1], 10) || 8,
+    ];
+    if (!leadsOut[leadName]) {
+      leadsOut[leadName] = {
+        contacts: [],
+        pairs: [],
+        n_groups: 1,
+        dimensions,
+        type: type || "D",
+      };
+    }
+    leadsOut[leadName].contacts.push({
+      name: `${leadName}${label}`,
+      lead_group: 0,
+      lead_loc: labelToLeadLoc(label, dimensions),
+      coordinate_spaces: {
+        ct_voxel: {
+          raw: [
+            Math.round(Number(xs)),
+            Math.round(Number(ys)),
+            Math.round(Number(zs)),
+          ],
+        },
+      },
+    });
+  }
+  if (!Object.keys(leadsOut).length) {
+    throw new Error("No contacts found in TXT file.");
+  }
+  return {
+    leads: leadsOut,
+    origin_ct: scanFilename || "",
+    include_bipolar_pairs: false,
+    schema_version: 2,
+  };
 }
 
 function nextLabelForLead(leadName, contacts) {
@@ -277,7 +336,7 @@ export default function App() {
         setShowPicker(false);
         setThresholdStatus({
           tone: "ok",
-          text: `Uploaded ${data.filename} (${data.size_mb} MB). Open Threshold cloud when ready.`,
+          text: `Uploaded ${data.filename} (${data.size_mb} MB). Open Electrode View when ready.`,
         });
       } catch (err) {
         console.error("handleScanUpload:", err);
@@ -302,7 +361,7 @@ export default function App() {
       setThresholdStatus({
         tone: "ok",
         text: scanFilename
-          ? `CT threshold set to ${v}. Rebuilding applies on Threshold cloud.`
+          ? `CT threshold set to ${v}. Rebuilding applies on Electrode View.`
           : `CT threshold set to ${v}. Load a scan to use it.`,
       });
     } else {
@@ -465,16 +524,6 @@ export default function App() {
 
   const loadFileInputRef = useRef(null);
 
-  /** 1-based contact label → legacy lead_loc [row, col]. */
-  const labelToLeadLoc = (label, dimensions) => {
-    const n = Math.max(1, parseInt(label, 10) || 1) - 1;
-    const dx = Math.max(1, dimensions?.[0] || 1);
-    const dy = Math.max(1, dimensions?.[1] || 1);
-    if (dx === 1) return [Math.min(n, dy - 1), 0];
-    if (dy === 1) return [0, Math.min(n, dx - 1)];
-    return [Math.floor(n / dx) % dy, n % dx];
-  };
-
   /** Build legacy-compatible voxel_coordinates.json document. */
   const buildExportDocument = useCallback(async () => {
     if (!scanFilename) return null;
@@ -542,41 +591,119 @@ export default function App() {
     };
   }, [scanFilename, leads, contacts, includeBipolarPairs]);
 
-  const writeJsonFile = async (suggestedName, doc) => {
-    const text = JSON.stringify(doc, null, 2);
-    if (typeof window.showSaveFilePicker === "function") {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName,
-          types: [
-            {
-              description: "JSON",
-              accept: { "application/json": [".json"] },
-            },
-          ],
+  /**
+   * Legacy voxel_coordinates.txt (tab-separated), matching model/scan.py
+   * to_vox_mom: name, x, y, z, type, "dx dy"
+   */
+  const buildExportTxt = useCallback(
+    async (doc) => {
+      const lines = [];
+      const leadEntries = Object.entries(doc.leads || {}).sort(([a], [b]) =>
+        a.toUpperCase().localeCompare(b.toUpperCase())
+      );
+      for (const [, lead] of leadEntries) {
+        const dims = lead.dimensions || [1, 8];
+        const type = lead.type || "D";
+        const sorted = [...(lead.contacts || [])].sort((a, b) => {
+          const na = parseInt(String(a.name).replace(/\D+/g, ""), 10) || 0;
+          const nb = parseInt(String(b.name).replace(/\D+/g, ""), 10) || 0;
+          return na - nb;
         });
-        const writable = await handle.createWritable();
-        await writable.write(text);
-        await writable.close();
-        return true;
-      } catch (err) {
-        if (err?.name === "AbortError") return false;
-        console.warn("showSaveFilePicker failed, falling back:", err);
+        for (const c of sorted) {
+          const v = c.coordinate_spaces?.ct_voxel?.raw || [0, 0, 0];
+          lines.push(
+            `${c.name}\t${v[0]}\t${v[1]}\t${v[2]}\t${type}\t${dims[0]} ${dims[1]}\n`
+          );
+        }
       }
-    }
-    const blob = new Blob([text], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = suggestedName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    return true;
-  };
+      return lines.join("");
+    },
+    []
+  );
 
-  /** Save as… — pick a local JSON path (legacy-style export). */
+  /**
+   * Write annotations. When the File System Access API is available the native
+   * save dialog lists both JSON and TXT; otherwise we ask once and download.
+   */
+  const writeAnnotationFile = useCallback(
+    async (doc) => {
+      const jsonText = JSON.stringify(doc, null, 2);
+      const txtText = await buildExportTxt(doc);
+
+      const payloadFor = (format) =>
+        format === "txt"
+          ? {
+              text: txtText,
+              mime: "text/plain",
+              name: "voxel_coordinates.txt",
+              format,
+            }
+          : {
+              text: jsonText,
+              mime: "application/json",
+              name: "voxel_coordinates.json",
+              format,
+            };
+
+      const download = (payload) => {
+        if (!payload.text || !String(payload.text).trim()) {
+          throw new Error("Nothing to write — export produced an empty file.");
+        }
+        const blob = new Blob([payload.text], { type: payload.mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = payload.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return payload.format;
+      };
+
+      if (typeof window.showSaveFilePicker === "function") {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: "voxel_coordinates.json",
+            types: [
+              {
+                description: "JSON (full metadata)",
+                accept: { "application/json": [".json"] },
+              },
+              {
+                description: "TXT (legacy tab-separated)",
+                accept: { "text/plain": [".txt"] },
+              },
+            ],
+          });
+          const fname = (handle.name || "").toLowerCase();
+          const format = fname.endsWith(".txt") ? "txt" : "json";
+          const payload = payloadFor(format);
+          if (!payload.text || !String(payload.text).trim()) {
+            throw new Error("Nothing to write — export produced an empty file.");
+          }
+          const writable = await handle.createWritable();
+          // Blob write is more reliable than a raw string across Chromium/Electron.
+          await writable.write(new Blob([payload.text], { type: payload.mime }));
+          await writable.close();
+          return format;
+        } catch (err) {
+          if (err?.name === "AbortError") return null;
+          console.warn("showSaveFilePicker failed, falling back:", err);
+        }
+      }
+
+      const answer = window.prompt("Save coordinates as json or txt?", "json");
+      if (answer == null) return null;
+      const v = answer.trim().toLowerCase();
+      const format =
+        v === "txt" || v === ".txt" || v === "text" || v === "t" ? "txt" : "json";
+      return download(payloadFor(format));
+    },
+    [buildExportTxt]
+  );
+
+  /** Save as… — JSON or legacy TXT. */
   const saveAnnotations = useCallback(async () => {
     if (!scanFilename) return;
     if (!leads.length && !contacts.length) {
@@ -587,18 +714,20 @@ export default function App() {
     try {
       const doc = await buildExportDocument();
       if (!doc) return;
-      const ok = await writeJsonFile("voxel_coordinates.json", doc);
-      if (ok) {
+      const format = await writeAnnotationFile(doc);
+      if (format) {
         const nC = contacts.length;
         const nL = leads.length;
-        alert(`Saved ${nC} contact(s) across ${nL} lead(s) to JSON.`);
+        alert(
+          `Saved ${nC} contact(s) across ${nL} lead(s) as .${format}.`
+        );
       }
     } catch (err) {
       console.error("saveAnnotations:", err);
       alert(`Failed to save: ${err.message || err}`);
     }
     setSaving(false);
-  }, [scanFilename, leads, contacts, buildExportDocument]);
+  }, [scanFilename, leads, contacts, buildExportDocument, writeAnnotationFile]);
 
   /** Apply a loaded annotation document (legacy or web formats). */
   const applyAnnotationDocument = useCallback(
@@ -653,7 +782,7 @@ export default function App() {
         rawContacts = data.contacts;
       } else {
         throw new Error(
-          "Unrecognized JSON. Expected legacy voxel_coordinates.json or web export."
+          "Unrecognized file. Expected voxel_coordinates.json or .txt."
         );
       }
 
@@ -722,10 +851,10 @@ export default function App() {
     [scanFilename]
   );
 
-  /** Load coordinates — pick a local JSON file (legacy-style). */
+  /** Load coordinates — pick a local JSON or TXT file. */
   const loadAnnotations = useCallback(() => {
     if (!scanFilename) {
-      alert("Load a scan first, then open a coordinates JSON.");
+      alert("Load a scan first, then open a coordinates JSON or TXT.");
       return;
     }
     if (contacts.length > 0 || leads.length > 0) {
@@ -756,8 +885,34 @@ export default function App() {
       if (!file) return;
       try {
         const text = await file.text();
-        const raw = JSON.parse(text);
+        if (!text || !text.trim()) {
+          throw new Error(
+            "File is empty. Re-save with Save as… (json or txt) and try again."
+          );
+        }
+        const name = (file.name || "").toLowerCase();
+        const looksTxt =
+          name.endsWith(".txt") ||
+          (!name.endsWith(".json") && /^\S+\t/.test(text.trim()));
+        let raw;
+        if (looksTxt) {
+          raw = parseTxtCoordinates(text, scanFilename);
+        } else {
+          try {
+            raw = JSON.parse(text);
+          } catch (parseErr) {
+            throw new Error(
+              `Invalid JSON (${parseErr.message}). If this was meant to be a ` +
+                `legacy .txt, rename it with a .txt extension and try again.`
+            );
+          }
+        }
         const { nContacts, nLeads } = await applyAnnotationDocument(raw);
+        if (nContacts === 0) {
+          throw new Error(
+            "File parsed but no contacts had usable coordinates for this scan."
+          );
+        }
         alert(
           `Loaded ${nContacts} contact(s) across ${nLeads} lead(s) from ${file.name}.`
         );
@@ -766,7 +921,7 @@ export default function App() {
         alert(`Failed to load annotations: ${err.message || err}`);
       }
     },
-    [applyAnnotationDocument]
+    [applyAnnotationDocument, scanFilename]
   );
 
 
@@ -1127,9 +1282,9 @@ export default function App() {
               className={`btn btn-compact ${viewerTab === "cloud" ? "btn-primary" : ""}`}
               onClick={() => setViewerTab("cloud")}
               disabled={!scanFilename}
-              title="Sparse super-threshold voxel cloud (professor workflow)"
+              title="3D electrode cloud — easiest mode for annotating contacts"
             >
-              Threshold cloud
+              Electrode View
             </button>
           </div>
           <div className="ct-threshold-row">

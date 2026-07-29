@@ -352,7 +352,7 @@ export default function ControlPanel({
         <input
           ref={loadFileInputRef}
           type="file"
-          accept="application/json,.json"
+          accept=".json,.txt,application/json,text/plain"
           style={{ display: "none" }}
           onChange={onAnnotationFileSelected}
         />
@@ -372,7 +372,7 @@ export default function ControlPanel({
             className="btn"
             onClick={onLoadCoordinates}
             disabled={!scanLoaded}
-            title="Open a voxel_coordinates.json (or web export) from your computer"
+            title="Open voxel_coordinates.json or .txt from your computer"
           >
             Load coordinates
           </button>
@@ -383,7 +383,7 @@ export default function ControlPanel({
             className="btn btn-primary"
             onClick={onSave}
             disabled={!scanLoaded || saving}
-            title="Save leads & contacts as JSON to a file you choose"
+            title="Save leads & contacts as JSON or TXT"
           >
             {saving ? "Saving…" : "Save as…"}
           </button>

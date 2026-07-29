@@ -34,6 +34,47 @@ function basePython() {
   return isWin ? "python" : "python3";
 }
 
+/**
+ * Refuse to stage a tree whose symlinks lead outside it.
+ *
+ * A link that escapes the bundle still resolves on the machine that built it,
+ * so nothing downstream notices — not electron-builder, not the packaged
+ * launch test. The failure surfaces only once a user runs the installer, as
+ * "Failed to load Python shared library".
+ */
+function assertSelfContained(dir) {
+  const offenders = [];
+
+  const walk = (current) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isSymbolicLink()) {
+        const target = fs.readlinkSync(full);
+        const resolved = path.resolve(path.dirname(full), target);
+        const escapes = path.relative(dir, resolved).startsWith("..");
+        if (path.isAbsolute(target) || escapes) {
+          offenders.push(`${path.relative(dir, full)} -> ${target}`);
+        } else if (!fs.existsSync(resolved)) {
+          offenders.push(`${path.relative(dir, full)} -> ${target} (dangling)`);
+        }
+      } else if (entry.isDirectory()) {
+        walk(full);
+      }
+    }
+  };
+
+  walk(dir);
+
+  if (offenders.length) {
+    console.error(
+      `\n${offenders.length} symlink(s) in the staged backend point outside it, ` +
+        "so the build would only run on this machine:\n  " +
+        offenders.join("\n  ")
+    );
+    process.exit(1);
+  }
+}
+
 function main() {
   if (!fs.existsSync(path.join(FRONTEND_BUILD, "index.html"))) {
     console.error(
@@ -89,7 +130,13 @@ function main() {
 
   fs.rmSync(STAGE_DIR, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(STAGE_DIR), { recursive: true });
-  fs.cpSync(built, STAGE_DIR, { recursive: true });
+  // verbatimSymlinks is load-bearing: without it cpSync resolves every relative
+  // symlink against the source tree and writes it back as an absolute path, so
+  // the Python.framework links inside PyInstaller's output end up pointing at
+  // .dist-backend on the build machine. They resolve fine there — including on
+  // CI, which is why this shipped — and dangle on every user's disk.
+  fs.cpSync(built, STAGE_DIR, { recursive: true, verbatimSymlinks: true });
+  assertSelfContained(STAGE_DIR);
 
   const exeName = isWin ? "voxtool-backend.exe" : "voxtool-backend";
   const exePath = path.join(STAGE_DIR, exeName);
@@ -118,4 +165,6 @@ function main() {
   console.log(`UI bundle at ${uiIndex}`);
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { assertSelfContained };

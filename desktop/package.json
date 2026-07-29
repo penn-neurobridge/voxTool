@@ -1,7 +1,7 @@
 {
   "name": "voxtool-desktop",
   "productName": "VoxTool",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Local desktop build of VoxTool — CT electrode localization that runs entirely offline.",
   "main": "main.js",
   "license": "SEE LICENSE IN ../LICENSE.txt",
@@ -32,6 +32,7 @@
     "productName": "VoxTool",
     "copyright": "Copyright © VoxTool contributors",
     "asar": true,
+    "afterPack": "scripts/adhoc-sign-mac.js",
     "files": [
       "main.js",
       "preload.js",

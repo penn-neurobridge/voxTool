@@ -3,19 +3,6 @@ import { Niivue } from "@niivue/niivue";
 
 const API = process.env.REACT_APP_API_URL || "";
 
-const LEAD_COLORS = [
-  [255, 99, 99],
-  [99, 199, 255],
-  [255, 199, 99],
-  [149, 255, 99],
-  [199, 99, 255],
-  [99, 255, 199],
-  [255, 99, 199],
-  [255, 255, 99],
-  [99, 99, 255],
-  [255, 149, 99],
-];
-
 /** Numeric order for labels like LA1 (first integer in string). */
 function contactLabelSortKey(label) {
   if (label == null) return NaN;
@@ -165,6 +152,9 @@ export default function NiiVueViewer({
       isHighResolutionCapable: false,
       isAntiAlias: false,
       isOrientCube: true,
+      // Connectome node names (RA1, …) otherwise become a fixed right-side
+      // legend panel that floats over every slice while you scroll.
+      showLegend: false,
     });
     nv.attachToCanvas(canvasRef.current);
 
@@ -257,7 +247,10 @@ export default function NiiVueViewer({
       nv.setRenderAzimuthElevation(120, 10);
       nv.volScaleMultiplier = 1.0;
       nv.setSliceMM(true);
-      nv.setMeshThicknessOn2D(Infinity);
+      // Infinity draws the entire connectome on every 2D slice, so contacts
+      // appear to hover in fixed screen positions while you scroll. A few mm
+      // keeps a contact visible only near the slice it belongs on.
+      nv.setMeshThicknessOn2D(4);
       nv.setClipPlaneThick(0.7);
       if (nv.volumes?.[0]) {
         nv.volumes[0].cal_min = calMin;
@@ -333,6 +326,9 @@ export default function NiiVueViewer({
       const mesh = nv.loadConnectomeAsMesh(
         buildContactsConnectome(contacts, leads || [])
       );
+      // Hide the colorbar strip (often just a lone "9") that connectome meshes
+      // otherwise draw on the right edge of the viewer.
+      mesh.colorbarVisible = false;
       nv.addMesh(mesh);
       markerMeshRef.current = mesh;
       nv.drawScene?.();
@@ -359,6 +355,7 @@ export default function NiiVueViewer({
       const mesh = nv.loadConnectomeAsMesh(
         buildPreviewConnectome(pendingContact.coord, pendingContact.label)
       );
+      mesh.colorbarVisible = false;
       nv.addMesh(mesh);
       previewMeshRef.current = mesh;
       nv.drawScene?.();

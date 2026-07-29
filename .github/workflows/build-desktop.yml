@@ -157,13 +157,13 @@ jobs:
           will warn you the first time.
 
           **macOS** — dragging VoxTool to Applications and double-clicking will say
-          the app is damaged or from an unidentified developer. Instead, right-click
-          the app and choose **Open**, then **Open** again in the dialog. You only do
-          this once. If macOS still refuses, run:
+          the app cannot be checked for malicious software. Instead, right-click the
+          app and choose **Open**, then **Open** again in the dialog. You only do
+          this once.
 
-          ```
-          xattr -cr /Applications/VoxTool.app
-          ```
+          On macOS 15 and newer that dialog may have no Open button at all. Dismiss
+          it, then go to **System Settings > Privacy & Security**, scroll to the note
+          about VoxTool being blocked, and click **Open Anyway**.
 
           **Windows** — SmartScreen shows a blue "Windows protected your PC" screen.
           Click **More info**, then **Run anyway**.

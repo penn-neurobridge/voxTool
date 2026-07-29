@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -583,8 +583,13 @@ export default function ThresholdCloudViewer({
     wrap.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    // Trackball (not Orbit): free tumble without a locked world-up axis, so
+    // electrodes can be spun into whatever view is easiest to annotate.
+    const controls = new TrackballControls(camera, renderer.domElement);
+    controls.rotateSpeed = 4.0;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.dynamicDampingFactor = 0.15;
     controlsRef.current = controls;
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.9);
@@ -660,7 +665,7 @@ export default function ThresholdCloudViewer({
       const ix = pickBestVoxelIndex(ptsObj, pickMap);
       if (ix === null || ix < 0 || ix >= pickMap.length) return;
 
-      const spacing = spacingRef.current || meta?.spacing || [1, 1, 1];
+      const spacing = spacingRef.current || [1, 1, 1];
       const local = selectDisplayedContact(pickMap, ix, spacing, PICK_BALL_MM, 2);
       if (!local?.voxels?.length) {
         setError("Could not snap to contact — click directly on a bright voxel.");
@@ -727,6 +732,7 @@ export default function ThresholdCloudViewer({
       cameraRef.current.aspect = w / hh;
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, hh);
+      controlsRef.current?.handleResize?.();
       const res = new THREE.Vector2(w, hh);
       fatLineMaterialsRef.current.forEach((m) => {
         if (m?.resolution) {

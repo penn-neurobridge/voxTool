@@ -7,7 +7,8 @@
  * The published archive unpacks with a signature that no longer seals its
  * resources, and recent macOS SIGKILLs the process on launch rather than
  * reporting anything useful. Re-signing ad-hoc makes `npm start` work from
- * source. Packaged builds are signed by electron-builder and unaffected.
+ * source. Packaged builds get the same treatment from
+ * scripts/adhoc-sign-mac.js, which runs as an electron-builder afterPack hook.
  */
 
 const { execFileSync } = require("child_process");
