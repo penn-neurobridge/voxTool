@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Niivue } from "@niivue/niivue";
 import { leadColormap, leadIndex, leadLutIndex } from "../leadColors";
 
@@ -76,6 +76,11 @@ const LAYOUT_TO_SLICETYPE = {
   render: 4,
 };
 
+// Voxel axis stepped through when a single plane fills the viewer.
+// Matches NiiVue's own scroll math (axis = 2 - axCorSag).
+const SINGLE_PLANE_AXIS = { axial: 2, coronal: 1, sagittal: 0 };
+const PLANE_LABEL = { axial: "Axial", coronal: "Coronal", sagittal: "Sagittal" };
+
 export default function NiiVueViewer({
   scanFilename,
   calMin,
@@ -100,6 +105,54 @@ export default function NiiVueViewer({
   const contactsRef = useRef(contacts);
   const leadsRef = useRef(leads);
   const pendingRef = useRef(pendingContact);
+
+  // Single-plane slice position, mirrored into React so the strip below the
+  // canvas can show and drive it. {index, max} are voxel indices on the plane's
+  // through-axis; max 0 means "nothing to step through yet".
+  const [slice, setSlice] = useState({ index: 0, max: 0 });
+  const layoutRef = useRef(layout);
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
+
+  /** Pull the current through-plane voxel index out of NiiVue's crosshair. */
+  const readSlice = () => {
+    const nv = nvRef.current;
+    const axis = SINGLE_PLANE_AXIS[layoutRef.current];
+    if (axis === undefined || !nv || !volumeReadyRef.current || !nv.volumes?.length) {
+      setSlice((prev) => (prev.max === 0 && prev.index === 0 ? prev : { index: 0, max: 0 }));
+      return;
+    }
+    try {
+      const vox = nv.frac2vox(nv.scene.crosshairPos);
+      const max = Math.max(0, (nv.volumes[0].dimsRAS?.[axis + 1] ?? 1) - 1);
+      const index = Math.min(Math.max(Math.round(vox[axis]), 0), max);
+      setSlice((prev) =>
+        prev.index === index && prev.max === max ? prev : { index, max }
+      );
+    } catch (err) {
+      /* crosshair not ready yet */
+    }
+  };
+
+  /** Move `delta` slices along the visible plane. NiiVue clamps at the ends. */
+  const stepSlice = (delta) => {
+    const nv = nvRef.current;
+    const axis = SINGLE_PLANE_AXIS[layoutRef.current];
+    if (axis === undefined || !nv || !nv.volumes?.length || !delta) return;
+    const xyz = [0, 0, 0];
+    xyz[axis] = delta;
+    nv.moveCrosshairInVox(xyz[0], xyz[1], xyz[2]);
+    readSlice();
+  };
+
+  const goToSlice = (target) => {
+    const nv = nvRef.current;
+    const axis = SINGLE_PLANE_AXIS[layoutRef.current];
+    if (axis === undefined || !nv || !nv.volumes?.length) return;
+    const current = Math.round(nv.frac2vox(nv.scene.crosshairPos)[axis]);
+    stepSlice(Math.round(target) - current);
+  };
 
   const onLocationChangeRef = useRef(onLocationChange);
   useEffect(() => {
@@ -209,6 +262,8 @@ export default function NiiVueViewer({
         snapped: false,
       };
       onLocationChangeRef.current?.(rawCoord);
+      // Keep the slice strip in step with wheel scrolls and in-plane clicks.
+      readSlice();
 
       if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
       if (snapAbortRef.current) snapAbortRef.current.abort();
@@ -292,6 +347,7 @@ export default function NiiVueViewer({
       volumeReadyRef.current = true;
       // Remount/switch race: contacts may already exist before the volume was ready.
       rebuildMarkers();
+      readSlice();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanFilename]);
@@ -312,8 +368,31 @@ export default function NiiVueViewer({
     requestAnimationFrame(() => {
       nv.resizeListener?.();
       nv.drawScene?.();
+      readSlice();
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout]);
+
+  // Single-pane A/C/S can only be scrolled with the wheel: clicking sets the
+  // in-plane crosshair, and NiiVue's arrow keys step 4D frames, not slices.
+  // Up/Down and PageUp/PageDown give it a keyboard that matches the strip.
+  useEffect(() => {
+    if (!active || SINGLE_PLANE_AXIS[layout] === undefined) return undefined;
+    const onKey = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      let delta = 0;
+      if (e.key === "ArrowUp" || e.key === "PageUp") delta = 1;
+      else if (e.key === "ArrowDown" || e.key === "PageDown") delta = -1;
+      else return;
+      e.preventDefault();
+      stepSlice(delta);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, layout]);
 
   useEffect(() => {
     const nv = nvRef.current;
@@ -360,9 +439,47 @@ export default function NiiVueViewer({
     });
   }, [active]);
 
+  const planeLabel = PLANE_LABEL[layout];
+
   return (
-    <div className="viewer-container">
-      <canvas ref={canvasRef} />
-    </div>
+    <>
+      {planeLabel && slice.max > 0 && (
+        <div className="slice-strip">
+          <button
+            type="button"
+            className="btn btn-compact slice-step"
+            onClick={() => stepSlice(-1)}
+            title="Previous slice (Down arrow)"
+          >
+            ‹
+          </button>
+          <input
+            type="range"
+            className="slice-range"
+            min={0}
+            max={slice.max}
+            step={1}
+            value={slice.index}
+            aria-label={`${planeLabel} slice`}
+            onChange={(e) => goToSlice(parseInt(e.target.value, 10))}
+          />
+          <button
+            type="button"
+            className="btn btn-compact slice-step"
+            onClick={() => stepSlice(1)}
+            title="Next slice (Up arrow)"
+          >
+            ›
+          </button>
+          <span className="slice-readout">
+            {planeLabel} slice {slice.index + 1} / {slice.max + 1}
+          </span>
+          <span className="slice-hint">scroll · ↑/↓ · drag slider</span>
+        </div>
+      )}
+      <div className="viewer-container">
+        <canvas ref={canvasRef} />
+      </div>
+    </>
   );
 }
