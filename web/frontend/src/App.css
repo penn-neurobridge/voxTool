@@ -312,10 +312,11 @@
   height: 100%;
 }
 
+/* Do NOT force canvas width/height in CSS — NiiVue sizes the drawing
+   buffer itself. Stretching via CSS desyncs mouse/scroll coords from pixels
+   and makes A/C/S feel frozen. */
 .viewer-container canvas {
   display: block;
-  width: 100%;
-  height: 100%;
 }
 
 /* ── Panel sections ── */

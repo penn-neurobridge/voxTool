@@ -4,13 +4,6 @@ import { leadColormap, leadIndex, leadLutIndex } from "../leadColors";
 
 const API = process.env.REACT_APP_API_URL || "";
 
-/** Numeric order for labels like LA1 (first integer in string). */
-function contactLabelSortKey(label) {
-  if (label == null) return NaN;
-  const m = String(label).match(/\d+/);
-  return m ? parseInt(m[0], 10) : NaN;
-}
-
 function buildContactsConnectome(contacts, leads) {
   const nodes = contacts
     .filter((c) => c.coord)
@@ -23,48 +16,23 @@ function buildContactsConnectome(contacts, leads) {
       sizeValue: 1,
     }));
 
-  // Rebuild index map after filter so edge indices stay valid.
-  const indexByKey = new Map();
-  contacts.forEach((c, i) => {
-    if (c.coord) indexByKey.set(i, indexByKey.size);
-  });
-
-  const edges = [];
-  const byLead = new Map();
-  contacts.forEach((c, i) => {
-    if (!c.coord) return;
-    const n = contactLabelSortKey(c.label);
-    if (!Number.isFinite(n)) return;
-    if (!byLead.has(c.lead)) byLead.set(c.lead, []);
-    byLead.get(c.lead).push({ i: indexByKey.get(i), n });
-  });
-  for (const [leadName, arr] of byLead) {
-    arr.sort((a, b) => a.n - b.n);
-    const cv = leadLutIndex(leadIndex(leadName, leads));
-    for (let k = 0; k < arr.length - 1; k++) {
-      edges.push({
-        first: arr[k].i,
-        second: arr[k + 1].i,
-        colorValue: cv,
-      });
-    }
-  }
-
+  // Nodes only — connectome edge cylinders clip into 2D slices as ugly teal
+  // slabs/dashes. Lead connectivity is already clear in Electrode View.
   return {
     name: "contacts",
     nodes,
-    edges,
+    edges: [],
     nodeColormap: "voxtool-leads",
     nodeColormapNegative: "voxtool-leads",
-    // colorValue is already a 0..255 LUT index — see leadLutIndex().
     nodeMinColor: 0,
     nodeMaxColor: 255,
-    nodeScale: 3.2,
+    // Modest spheres; large scale + edges caused the "crappy" slab look.
+    nodeScale: 1.8,
     edgeColormap: "voxtool-leads",
     edgeColormapNegative: "voxtool-leads",
     edgeMin: 0,
     edgeMax: 255,
-    edgeScale: 1.5,
+    edgeScale: 0,
     legendLineThickness: 0,
   };
 }
@@ -89,7 +57,7 @@ function buildPreviewConnectome(coord, label) {
     nodeColormapNegative: "voxtool-leads",
     nodeMinColor: 0,
     nodeMaxColor: 255,
-    nodeScale: 3.6,
+    nodeScale: 2.0,
     edgeColormap: "voxtool-leads",
     edgeColormapNegative: "voxtool-leads",
     edgeMin: 0,
@@ -311,8 +279,8 @@ export default function NiiVueViewer({
       nv.setRenderAzimuthElevation(120, 10);
       nv.volScaleMultiplier = 1.0;
       nv.setSliceMM(true);
-      // Finite thickness so markers only appear near their slice (not hovering).
-      nv.setMeshThicknessOn2D(6);
+      // Thin slice clipping so markers read as dots, not thick mesh chunks.
+      nv.setMeshThicknessOn2D(2.5);
       nv.setClipPlaneThick(0.7);
       if (nv.volumes?.[0]) {
         nv.volumes[0].cal_min = calMin;
