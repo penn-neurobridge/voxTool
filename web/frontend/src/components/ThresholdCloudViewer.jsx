@@ -481,7 +481,38 @@ export default function ThresholdCloudViewer({
     } finally {
       setLoading(false);
     }
+    // rebuildPoints only reads refs and setState, so it never needs to
+    // re-create this callback — and naming it here would, since it is a fresh
+    // function every render, which would re-fire the effects that depend on it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanFilename, cloudThresholdPct]);
+
+  /**
+   * Point the camera at the whole cloud. Used both on load and by Reset view —
+   * TrackballControls.reset() would go back to the placeholder camera set
+   * before any data existed, which is nowhere near the head.
+   */
+  const frameToCloud = () => {
+    const attr = pointsRef.current?.geometry?.attributes?.position;
+    const cam = cameraRef.current;
+    const ctrls = controlsRef.current;
+    if (!attr || !cam || !ctrls) return;
+    const box = new THREE.Box3().setFromBufferAttribute(attr);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const size = box.getSize(new THREE.Vector3()).length();
+    const dist = Math.max(size * 1.2, 50);
+    cam.position.set(
+      center.x + dist * 0.5,
+      center.y + dist * 0.4,
+      center.z + dist
+    );
+    // Free tumble lets "up" drift, so restore it or the reset lands rolled.
+    cam.up.set(0, 1, 0);
+    ctrls.target.copy(center);
+    ctrls.update();
+    requestRenderRef.current?.();
+  };
 
   const rebuildPoints = (points, spacing) => {
     const scene = sceneRef.current;
@@ -531,20 +562,7 @@ export default function ThresholdCloudViewer({
     scene.add(pts);
     pointsRef.current = pts;
 
-    const box = new THREE.Box3().setFromBufferAttribute(geom.attributes.position);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    if (cameraRef.current && controlsRef.current) {
-      const size = box.getSize(new THREE.Vector3()).length();
-      const dist = Math.max(size * 1.2, 50);
-      cameraRef.current.position.set(
-        center.x + dist * 0.5,
-        center.y + dist * 0.4,
-        center.z + dist
-      );
-      controlsRef.current.target.copy(center);
-      controlsRef.current.update();
-    }
+    frameToCloud();
   };
 
   // Three.js scene lifecycle
@@ -1086,15 +1104,33 @@ export default function ThresholdCloudViewer({
               ? `${meta.returned.toLocaleString()} pts displayed · ${meta.total.toLocaleString()} above threshold · thr=${meta.thr?.toFixed(1) ?? "—"}${pickBusy ? " · snapping…" : ""}`
               : "—"}
         </span>
-        <button type="button" className="btn btn-compact" onClick={fetchCloud} disabled={loading}>
-          Refresh cloud
-        </button>
+        <div className="cloud-toolbar-actions">
+          <button
+            type="button"
+            className="btn btn-compact"
+            onClick={frameToCloud}
+            disabled={loading}
+            title="Point the camera back at the whole cloud"
+          >
+            Reset view
+          </button>
+          <button type="button" className="btn btn-compact" onClick={fetchCloud} disabled={loading}>
+            Refresh cloud
+          </button>
+        </div>
       </div>
       {error && <div className="cloud-error">{error}</div>}
-      <div className="cloud-hint muted">
-        {selectedLead
-          ? "Click a contact → orange, Submit → lead color. Re-submit same # to replace. Drag to rotate · Shift-drag (or right-drag) to pan · scroll to zoom. First click may take ~30s."
-          : "Select a lead in the sidebar, then click the cloud. Drag to rotate · Shift-drag to pan · scroll to zoom."}
+      {/* Workflow on the left, controls on the right — same split as the Slices
+          toolbar, so the mouse hints sit in the same place in both viewers. */}
+      <div className="cloud-hint">
+        <span className="muted">
+          {selectedLead
+            ? "Click a contact → orange, Submit → lead colour. Re-submit the same # to replace it. First click may take ~30s."
+            : "Select a lead in the sidebar, then click the cloud to pick a contact."}
+        </span>
+        <span className="muted cloud-controls-hint">
+          drag to rotate · Shift-drag to pan · scroll to zoom
+        </span>
       </div>
       <div ref={wrapRef} className="cloud-canvas-wrap" />
     </div>
