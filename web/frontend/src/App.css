@@ -761,6 +761,28 @@
   background: var(--accent-hover);
 }
 
+/* Selected state for the segmented controls (tabs, layout, window presets,
+   contacts size). A solid accent chip with black text shouts "press me" and is
+   harsh against a dark panel — but these only say which mode you are already
+   in. Tint them instead, and keep the solid fill for real actions like Submit
+   and Save as…, so the two stop looking identical. */
+.viewer-tabs .btn.btn-primary,
+.layout-group .btn.btn-primary,
+.toolbar-presets .btn.btn-primary,
+.contacts-size-group .btn.btn-primary {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.viewer-tabs .btn.btn-primary:hover,
+.layout-group .btn.btn-primary:hover,
+.toolbar-presets .btn.btn-primary:hover,
+.contacts-size-group .btn.btn-primary:hover {
+  background: #22485c;
+}
+
 .btn-danger {
   border-color: var(--danger);
   color: var(--danger);
