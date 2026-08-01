@@ -304,6 +304,7 @@ export default function ThresholdCloudViewer({
   const pointsRef = useRef(null);
   const pickIndexToVoxelRef = useRef(null);
   const animationRef = useRef(null);
+  const requestRenderRef = useRef(null);
   const activeRef = useRef(active);
   const spacingRef = useRef([1, 1, 1]);
   const selectedLeadRef = useRef("");
@@ -560,7 +561,10 @@ export default function ThresholdCloudViewer({
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // A 2x buffer means 4x the fragments for a cloud that can run to six
+    // figures of points. 1.5 keeps the edges clean on a Retina panel and cut
+    // rotation from a slideshow to usable on an older laptop.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(wrap.clientWidth, wrap.clientHeight);
     wrap.appendChild(renderer.domElement);
     rendererRef.current = renderer;
@@ -572,6 +576,10 @@ export default function ThresholdCloudViewer({
     controls.zoomSpeed = 1.2;
     controls.panSpeed = 0.8;
     controls.dynamicDampingFactor = 0.15;
+    // keys is [rotate, zoom, pan]. Default 'KeyA'/'KeyS'/'KeyD' collides with
+    // the S submit hotkey, and nobody guesses D. Shift-drag pans instead, which
+    // is the reflex people bring from the legacy viewer. Right-drag pans too.
+    controls.keys = ["", "", "ShiftLeft"];
     controlsRef.current = controls;
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.9);
@@ -699,12 +707,25 @@ export default function ThresholdCloudViewer({
 
     renderer.domElement.addEventListener("click", onCanvasClick);
 
+    // Render on demand. The loop used to repaint the whole cloud 60x a second
+    // forever, so the GPU never went idle even with nobody touching the view.
+    // controls.update() is cheap and fires "change" whenever the camera moves,
+    // which covers rotation and the damping tail.
+    let needsRender = true;
+    const requestRender = () => {
+      needsRender = true;
+    };
+    requestRenderRef.current = requestRender;
+    controls.addEventListener("change", requestRender);
+
     const loop = () => {
       animationRef.current = requestAnimationFrame(loop);
       // Pause when the pane is hidden so we don't steal input or burn GPU
       // while the user is in Slices mode.
       if (!activeRef.current) return;
       controls.update();
+      if (!needsRender) return;
+      needsRender = false;
       renderer.render(scene, camera);
     };
     loop();
@@ -718,6 +739,7 @@ export default function ThresholdCloudViewer({
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, hh);
       controlsRef.current?.handleResize?.();
+      requestRenderRef.current?.();
       const res = new THREE.Vector2(w, hh);
       fatLineMaterialsRef.current.forEach((m) => {
         if (m?.resolution) {
@@ -732,6 +754,8 @@ export default function ThresholdCloudViewer({
       ro.disconnect();
       if (pickAbortRef.current) pickAbortRef.current.abort();
       renderer.domElement.removeEventListener("click", onCanvasClick);
+      controls.removeEventListener("change", requestRender);
+      requestRenderRef.current = null;
       cancelAnimationFrame(animationRef.current);
       controls.dispose();
       wrap.removeChild(renderer.domElement);
@@ -1022,7 +1046,10 @@ export default function ThresholdCloudViewer({
         new THREE.BufferAttribute(new Float32Array(colors), 3)
       );
       const mat = new THREE.PointsMaterial({
-        size: Math.max(sx, sy, sz) * 1.55,
+        // Lowering the percentile can quadruple the grey cloud around a
+        // contact, which swamps a marker drawn at cloud size. Slightly larger
+        // keeps labelled contacts legible at any threshold.
+        size: Math.max(sx, sy, sz) * 1.9,
         sizeAttenuation: true,
         vertexColors: true,
         // Must join the transparent pass to sit above the cloud. Opaque objects
@@ -1041,6 +1068,14 @@ export default function ThresholdCloudViewer({
     scene.add(group);
   }, [contacts, pendingContact, selectedLead, leads, meta]);
 
+  // Declared last, and deliberately without a dependency array: every effect
+  // above that rebuilds scene contents has already run by this point, so one
+  // frame is guaranteed after any change. On-demand rendering is only safe
+  // while this stays the final effect in the component.
+  useEffect(() => {
+    requestRenderRef.current?.();
+  });
+
   return (
     <div className="cloud-viewer-root">
       <div className="cloud-toolbar">
@@ -1058,8 +1093,8 @@ export default function ThresholdCloudViewer({
       {error && <div className="cloud-error">{error}</div>}
       <div className="cloud-hint muted">
         {selectedLead
-          ? "Click a contact → orange, Submit → lead color. Re-submit same # to replace. First click may take ~30s."
-          : "Select a lead in the sidebar, then click the cloud."}
+          ? "Click a contact → orange, Submit → lead color. Re-submit same # to replace. Drag to rotate · Shift-drag (or right-drag) to pan · scroll to zoom. First click may take ~30s."
+          : "Select a lead in the sidebar, then click the cloud. Drag to rotate · Shift-drag to pan · scroll to zoom."}
       </div>
       <div ref={wrapRef} className="cloud-canvas-wrap" />
     </div>

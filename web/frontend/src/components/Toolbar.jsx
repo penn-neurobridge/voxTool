@@ -25,6 +25,8 @@ export default function Toolbar({
   onViewerLayoutChange,
   sidebarCollapsed,
   onToggleSidebar,
+  dragMode = "contrast",
+  onDragModeChange,
 }) {
   const [autoLoading, setAutoLoading] = useState(false);
   const [localMin, setLocalMin] = useState(calMin);
@@ -98,6 +100,26 @@ export default function Toolbar({
             disabled={nvDisabled}
           >
             {l.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="toolbar-divider" />
+
+      <div className="layout-group" title="What dragging the image does">
+        {[
+          ["contrast", "Contrast", "Drag adjusts brightness/contrast. Wheel steps slices."],
+          ["pan", "Pan", "Drag moves the image; wheel zooms. Use the slice slider to change slices."],
+        ].map(([id, label, hint]) => (
+          <button
+            key={id}
+            type="button"
+            className={`btn btn-compact ${dragMode === id ? "btn-primary" : ""}`}
+            onClick={() => onDragModeChange?.(id)}
+            title={hint}
+            disabled={nvDisabled}
+          >
+            {label}
           </button>
         ))}
       </div>

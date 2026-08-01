@@ -16,9 +16,27 @@ export const LEAD_PALETTE_HEX = [
   0x8faf1b, // olive
 ];
 
+/**
+ * Palette slot for a new lead: the lowest one no existing lead has claimed.
+ * Stored on the lead as `colorIndex` so colours are a property of the lead, not
+ * of its position in the array — deleting a lead used to renumber every lead
+ * after it and silently repaint their contacts.
+ */
+export function nextColorIndex(leads) {
+  const used = new Set(
+    (leads || []).map((l) => l.colorIndex).filter((n) => Number.isInteger(n))
+  );
+  for (let i = 0; i < LEAD_PALETTE_HEX.length; i++) {
+    if (!used.has(i)) return i;
+  }
+  return used.size % LEAD_PALETTE_HEX.length;
+}
+
 export function leadIndex(leadName, leads) {
-  const i = leads.findIndex((l) => l.name === leadName);
-  return Math.max(0, i);
+  const i = (leads || []).findIndex((l) => l.name === leadName);
+  if (i < 0) return 0;
+  const stored = leads[i].colorIndex;
+  return Number.isInteger(stored) ? stored : i;
 }
 
 export function leadColorHex(leadName, leads) {

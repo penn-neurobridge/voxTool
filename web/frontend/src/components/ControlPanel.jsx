@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ContactList from "./ContactList";
+import { nextColorIndex } from "../leadColors";
 
 const LEAD_TYPES = [
   { code: "D", name: "Depth" },
@@ -22,6 +23,9 @@ export default function ControlPanel({
   onCommitPending,
   onCancelPending,
   onDeleteContact,
+  onDeleteLead,
+  selectedContact,
+  onSelectContact,
   onInterpolate,
   interpolating,
   interpStatus,
@@ -44,6 +48,9 @@ export default function ControlPanel({
   const [newLeadDimX, setNewLeadDimX] = useState(1);
   const [newLeadDimY, setNewLeadDimY] = useState(8);
   const [defineLeadsOpen, setDefineLeadsOpen] = useState(false);
+  // Contacts pane height. "tall" gives the list most of the sidebar for
+  // reviewing a long implant; "off" collapses it out of the way.
+  const [contactsSize, setContactsSize] = useState("normal");
 
   const addLead = () => {
     const name = newLeadName.trim();
@@ -55,18 +62,11 @@ export default function ControlPanel({
         name,
         type: newLeadType,
         dimensions: [parseInt(newLeadDimX) || 1, parseInt(newLeadDimY) || 1],
+        colorIndex: nextColorIndex(leads),
       },
     ]);
     setNewLeadName("");
     if (!selectedLead) setSelectedLead(name);
-  };
-
-  const removeLead = (name) => {
-    setLeads(leads.filter((l) => l.name !== name));
-    if (selectedLead === name) {
-      const remaining = leads.filter((l) => l.name !== name);
-      setSelectedLead(remaining.length > 0 ? remaining[0].name : "");
-    }
   };
 
   const activeLead = leads.find((l) => l.name === selectedLead);
@@ -86,6 +86,11 @@ export default function ControlPanel({
   const zero = Math.min(Math.max(idxForGrid - 1, 0), dimX * dimY - 1);
   const gridX = (zero % dimX) + 1;
   const gridY = Math.floor(zero / dimX) + 1;
+  // Submitting over an existing index replaces it; say so rather than leaving
+  // people to assume they have to delete the old one first.
+  const alreadyMarked = contacts.some(
+    (c) => c.lead === selectedLead && parseInt(c.label, 10) === idxForGrid
+  );
 
   const formatRas = (v) => {
     if (v === undefined || v === null || v === "—") return "—";
@@ -129,7 +134,16 @@ export default function ControlPanel({
         </div>
         {activeLead && (
           <div className="next-hint muted">
-            Suggested next free index: <strong>{nextLabel}</strong>
+            {alreadyMarked ? (
+              <span className="overwrite-hint">
+                {selectedLead}
+                {idxForGrid} is already marked — Submit replaces it.
+              </span>
+            ) : (
+              <>
+                Suggested next free index: <strong>{nextLabel}</strong>
+              </>
+            )}
           </div>
         )}
 
@@ -198,13 +212,56 @@ export default function ControlPanel({
         </div>
       </div>
 
-      <div className="panel-section panel-contacts flex-grow">
-        <h3 className="panel-heading">Contacts</h3>
-        <ContactList
-          contacts={contacts}
-          leads={leads}
-          onDelete={onDeleteContact}
-        />
+      <div
+        className={`panel-section panel-contacts flex-grow contacts-${contactsSize}`}
+      >
+        <div className="contacts-header">
+          <h3 className="panel-heading">Contacts ({contacts.length})</h3>
+          <div className="contacts-size-group">
+            {[
+              ["off", "▾", "Collapse the list"],
+              ["normal", "▪", "Normal height"],
+              ["tall", "▴", "Expand to fill the sidebar"],
+            ].map(([id, glyph, hint]) => (
+              <button
+                key={id}
+                type="button"
+                className={`btn btn-compact ${contactsSize === id ? "btn-primary" : ""}`}
+                onClick={() => setContactsSize(id)}
+                title={hint}
+              >
+                {glyph}
+              </button>
+            ))}
+          </div>
+        </div>
+        {selectedContact && (
+          <div className="contact-detail">
+            <span className="contact-detail-name">
+              {selectedContact.lead}
+              {selectedContact.label}
+            </span>
+            <span className="contact-detail-coords">
+              R {formatRas(selectedContact.coord?.R)} · A{" "}
+              {formatRas(selectedContact.coord?.A)} · S{" "}
+              {formatRas(selectedContact.coord?.S)}
+            </span>
+            {selectedContact.voxel && (
+              <span className="contact-detail-vox muted">
+                voxel [{selectedContact.voxel.join(", ")}]
+              </span>
+            )}
+          </div>
+        )}
+        {contactsSize !== "off" && (
+          <ContactList
+            contacts={contacts}
+            leads={leads}
+            onDelete={onDeleteContact}
+            selectedContact={selectedContact}
+            onSelect={onSelectContact}
+          />
+        )}
       </div>
 
       <div className="panel-section panel-workflow">
@@ -334,8 +391,8 @@ export default function ControlPanel({
                       <button
                         type="button"
                         className="btn-icon"
-                        onClick={() => removeLead(lead.name)}
-                        title="Remove lead"
+                        onClick={() => onDeleteLead(lead.name)}
+                        title="Remove lead and its marked contacts"
                       >
                         ×
                       </button>

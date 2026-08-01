@@ -94,6 +94,7 @@ export default function NiiVueViewer({
   snapThresholdPct = 99.96,
   showRasTags = true,
   active = true,
+  dragMode = "contrast",
 }) {
   const canvasRef = useRef(null);
   const nvRef = useRef(null);
@@ -418,6 +419,16 @@ export default function NiiVueViewer({
     }, 50);
     return () => clearTimeout(t);
   }, [calMin, calMax]);
+
+  // NiiVue DRAG_MODE: 1 = contrast (default), 3 = pan/zoom. In pan mode the
+  // wheel zooms instead of stepping slices, which is why the slice strip stays
+  // the reliable way to move through the stack.
+  useEffect(() => {
+    const nv = nvRef.current;
+    if (!nv) return;
+    nv.opts.dragMode = dragMode === "pan" ? 3 : 1;
+    nv.drawScene?.();
+  }, [dragMode]);
 
   useEffect(() => {
     const nv = nvRef.current;

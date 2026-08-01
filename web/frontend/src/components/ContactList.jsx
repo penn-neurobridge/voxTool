@@ -1,4 +1,12 @@
-export default function ContactList({ contacts, leads, onDelete }) {
+import { leadColorHex } from "../leadColors";
+
+export default function ContactList({
+  contacts,
+  leads,
+  onDelete,
+  selectedContact,
+  onSelect,
+}) {
   const leadOrdinal = (leadName) => {
     const i = leads.findIndex((l) => l.name === leadName);
     return i >= 0 ? i + 1 : 0;
@@ -35,10 +43,27 @@ export default function ContactList({ contacts, leads, onDelete }) {
         const lo = leadOrdinal(c.lead);
         const lbl = parseInt(c.label, 10);
         const labelNum = Number.isNaN(lbl) ? c.label : lbl;
+        const isSelected =
+          selectedContact &&
+          selectedContact.lead === c.lead &&
+          selectedContact.label === c.label;
+        const swatch = `#${leadColorHex(c.lead, leads || [])
+          .toString(16)
+          .padStart(6, "0")}`;
         return (
-          <li key={`${c.lead}-${c.label}-${idx}`}>
+          <li
+            key={`${c.lead}-${c.label}-${idx}`}
+            className={isSelected ? "contact-row-selected" : ""}
+            onClick={() => onSelect?.(c)}
+            title="Jump both viewers to this contact"
+          >
             <span className="contact-line">
               <span className="contact-name">
+                <span
+                  className="lead-swatch"
+                  style={{ background: swatch }}
+                  aria-hidden="true"
+                />
                 {c.lead}
                 {c.label}
               </span>
@@ -58,7 +83,10 @@ export default function ContactList({ contacts, leads, onDelete }) {
             <button
               type="button"
               className="delete-btn"
-              onClick={() => onDelete(idx)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(idx);
+              }}
               title="Delete contact"
             >
               ×

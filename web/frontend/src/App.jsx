@@ -127,6 +127,9 @@ export default function App() {
   const [showRasTags, setShowRasTags] = useState(true);
   const [includeBipolarPairs, setIncludeBipolarPairs] = useState(false);
   const [viewerLayout, setViewerLayout] = useState("multi");
+  const [selectedContact, setSelectedContact] = useState(null);
+  // NiiVue drag: "contrast" (default) or "pan" to shove the image around.
+  const [sliceDrag, setSliceDrag] = useState("contrast");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -513,6 +516,42 @@ export default function App() {
     setContacts((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
+  /**
+   * Deleting a lead takes its contacts with it. Leaving them behind orphaned
+   * them: their lead was gone, so they fell back to the first palette colour
+   * and turned bright green on the scan while still being saved to file.
+   */
+  const handleDeleteLead = useCallback(
+    (name) => {
+      const owned = contacts.filter((c) => c.lead === name).length;
+      if (
+        owned > 0 &&
+        !window.confirm(
+          `Delete lead ${name} and its ${owned} marked contact${
+            owned === 1 ? "" : "s"
+          }?\n\nThe markers disappear from both viewers. Other leads keep their colours.`
+        )
+      ) {
+        return;
+      }
+      const remaining = leads.filter((l) => l.name !== name);
+      setLeads(remaining);
+      setContacts((prev) => prev.filter((c) => c.lead !== name));
+      setSelectedContact((cur) => (cur?.lead === name ? null : cur));
+      if (selectedLead === name) {
+        setSelectedLead(remaining.length ? remaining[0].name : "");
+      }
+    },
+    [contacts, leads, selectedLead]
+  );
+
+  /** Clicking a row in the contact list drives both viewers to that point. */
+  const handleSelectContact = useCallback((contact) => {
+    if (!contact?.coord) return;
+    setSelectedContact(contact);
+    setCurrentCoord({ ...contact.coord, snapped: true });
+  }, []);
+
   const cleanScan = useCallback(() => {
     if (contacts.length === 0 && !pendingContact) return;
     if (!window.confirm("Remove all contacts and clear the pending marker?")) {
@@ -839,8 +878,16 @@ export default function App() {
         });
       }
 
+      // Files carry no palette slot, so pin one per lead in file order. Without
+      // this, colours would be positional again the moment a lead is deleted.
+      newLeads = newLeads.map((l, i) => ({
+        ...l,
+        colorIndex: Number.isInteger(l.colorIndex) ? l.colorIndex : i,
+      }));
+
       setLeads(newLeads);
       setContacts(newContacts);
+      setSelectedContact(null);
       setIncludeBipolarPairs(!!data.include_bipolar_pairs);
       setPendingContact(null);
       if (newLeads.length) {
@@ -1248,6 +1295,9 @@ export default function App() {
           onCommitPending={commitPending}
           onCancelPending={() => setPendingContact(null)}
           onDeleteContact={handleDeleteContact}
+          onDeleteLead={handleDeleteLead}
+          selectedContact={selectedContact}
+          onSelectContact={handleSelectContact}
           onInterpolate={handleInterpolate}
           interpolating={interpolating}
           interpStatus={interpStatus}
@@ -1324,6 +1374,8 @@ export default function App() {
             onViewerLayoutChange={setViewerLayout}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+            dragMode={sliceDrag}
+            onDragModeChange={setSliceDrag}
           />
         )}
 
@@ -1347,6 +1399,7 @@ export default function App() {
                 snapThresholdPct={thresholdPct}
                 showRasTags={showRasTags}
                 active={viewerTab === "slices"}
+                dragMode={sliceDrag}
               />
             </div>
             <div

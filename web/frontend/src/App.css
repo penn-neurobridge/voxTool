@@ -808,6 +808,84 @@ input:focus {
 
 .contact-list-dense li:hover {
   background: var(--accent-dim);
+  cursor: pointer;
+}
+
+.contact-list-dense li.contact-row-selected {
+  background: var(--accent-dim);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.lead-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+
+.contacts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contacts-header .panel-heading {
+  margin-bottom: 10px;
+}
+
+.contacts-size-group {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.contacts-size-group .btn {
+  min-width: 26px;
+  padding: 2px 6px;
+  line-height: 1.1;
+}
+
+/* The sidebar usually overflows, so there is no spare space for flex-grow to
+   hand out — these sizes have to be stated outright or "tall" does nothing. */
+.panel-contacts.contacts-off {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.panel-contacts.contacts-normal {
+  flex: 1 1 auto;
+  min-height: 240px;
+}
+
+.panel-contacts.contacts-tall {
+  flex: 1 1 auto;
+  min-height: 55vh;
+}
+
+.contact-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.contact-detail-name {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.overwrite-hint {
+  color: #ffc961;
 }
 
 .contact-line {
