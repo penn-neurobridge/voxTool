@@ -97,6 +97,7 @@ export default function NiiVueViewer({
   dragMode = "contrast",
 }) {
   const canvasRef = useRef(null);
+  const panOverlayRef = useRef(null);
   const nvRef = useRef(null);
   const markerMeshRef = useRef(null);
   const previewMeshRef = useRef(null);
@@ -430,6 +431,93 @@ export default function NiiVueViewer({
     nv.drawScene?.();
   }, [dragMode]);
 
+  /**
+   * Left-drag to pan.
+   *
+   * NiiVue only records a drag for the right or middle button — a left-drag
+   * just moves the crosshair — so setting dragMode to pan on its own rebinds
+   * the wheel to zoom and nothing else. Nobody reaches for right-drag on a
+   * laptop trackpad, so an overlay takes the pointer while pan is active and
+   * drives NiiVue's own pan maths. Wheel events are forwarded so zoom still
+   * works through it.
+   */
+  useEffect(() => {
+    if (dragMode !== "pan") return undefined;
+    const el = panOverlayRef.current;
+    const nv = nvRef.current;
+    if (!el || !nv?.canvas) return undefined;
+
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let moved = 0;
+
+    const relative = (e) => {
+      const r = nv.canvas.getBoundingClientRect();
+      return [e.clientX - r.left, e.clientY - r.top];
+    };
+
+    const onDown = (e) => {
+      if (e.button !== 0) return;
+      [startX, startY] = relative(e);
+      dragging = true;
+      moved = 0;
+      // dragForPanZoom offsets from wherever the view sat when the drag began.
+      nv.uiData.pan2DxyzmmAtMouseDown = nv.scene.pan2Dxyzmm.slice();
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    };
+
+    const onMove = (e) => {
+      if (!dragging) return;
+      const [x, y] = relative(e);
+      moved = Math.max(moved, Math.abs(x - startX) + Math.abs(y - startY));
+      const dpr = nv.uiData.dpr || 1;
+      // setDragStart/setDragEnd store device pixels; match that here.
+      nv.dragForPanZoom([startX * dpr, startY * dpr, x * dpr, y * dpr]);
+      nv.drawScene();
+    };
+
+    const onUp = (e) => {
+      if (dragging && moved < 4) {
+        // A tap, not a drag — still place the crosshair so contacts can be
+        // marked without leaving pan mode.
+        const [x, y] = relative(e);
+        nv.mouseClick(x, y);
+      }
+      dragging = false;
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+    };
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      nv.wheelListener(e);
+    };
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, [dragMode]);
+
+  const resetView = () => {
+    const nv = nvRef.current;
+    if (!nv) return;
+    nv.scene.pan2Dxyzmm = [0, 0, 0, 1];
+    nv.drawScene();
+  };
+
   useEffect(() => {
     const nv = nvRef.current;
     if (!nv) return;
@@ -498,6 +586,19 @@ export default function NiiVueViewer({
       )}
       <div className="viewer-container">
         <canvas ref={canvasRef} />
+        {dragMode === "pan" && (
+          <>
+            <div ref={panOverlayRef} className="pan-overlay" />
+            <button
+              type="button"
+              className="btn btn-compact pan-reset"
+              onClick={resetView}
+              title="Recentre and reset zoom"
+            >
+              Reset view
+            </button>
+          </>
+        )}
       </div>
     </>
   );

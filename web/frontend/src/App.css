@@ -358,6 +358,28 @@
   display: block;
 }
 
+/* Only mounted in Pan mode: takes the pointer so a left-drag pans instead of
+   dropping the crosshair. Wheel events are forwarded on to NiiVue. */
+.pan-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  z-index: 2;
+}
+
+.pan-overlay:active {
+  cursor: grabbing;
+}
+
+.pan-reset {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  opacity: 0.85;
+}
+
 /* ── Panel sections ── */
 .panel-section {
   padding: 12px 16px;
