@@ -164,6 +164,12 @@ export default function Toolbar({
         />
         <span className="threshold-value">{localMax}</span>
       </label>
+
+      {/* Lives in the toolbar, not the slice strip: pan and zoom work in every
+          layout, but the strip only exists for a single plane. */}
+      <span className="toolbar-hint muted">
+        drag to pan · ⌘/Ctrl-scroll or pinch to zoom
+      </span>
     </div>
   );
 }

@@ -213,6 +213,12 @@
   /* sidebar is unmounted, viewer takes the full width automatically */
 }
 
+.toolbar-hint {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .toolbar .threshold-value {
   font-variant-numeric: tabular-nums;
   color: var(--accent);
