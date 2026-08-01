@@ -244,6 +244,20 @@ Infra lives under `terraform/` (dev: S3 + CloudFront + Elastic Beanstalk).
 | 4-up / Axial / Coronal / Sagittal / 3D | 0 / 1 / 2 / 3 / 4 |
 | Next / previous slice (single plane) | ↑ / ↓ (or PageUp / PageDown) |
 
+### Mouse
+
+| Action | Slices | Electrode View |
+| ------ | ------ | -------------- |
+| Place the crosshair / pick a contact | click | click |
+| Move the image around | drag | Shift-drag (or right-drag) |
+| Zoom | Ctrl/Cmd + scroll | scroll |
+| Change slice | scroll | — |
+| Rotate the 3D render | drag inside the 3D tile | drag |
+
+Dragging the slices pans without moving the crosshair, so the point you are
+about to Submit stays put while you look around. **Reset view** appears in the
+corner once the image has been panned or zoomed.
+
 ## Other notes
 
 - Contact lists are sorted by lead name, then contact number. Double-check indices after **Interpolate**.

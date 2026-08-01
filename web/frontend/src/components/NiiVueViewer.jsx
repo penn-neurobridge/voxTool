@@ -94,7 +94,6 @@ export default function NiiVueViewer({
   snapThresholdPct = 99.96,
   showRasTags = true,
   active = true,
-  dragMode = "contrast",
 }) {
   const canvasRef = useRef(null);
   const panOverlayRef = useRef(null);
@@ -112,6 +111,7 @@ export default function NiiVueViewer({
   // canvas can show and drive it. {index, max} are voxel indices on the plane's
   // through-axis; max 0 means "nothing to step through yet".
   const [slice, setSlice] = useState({ index: 0, max: 0 });
+  const [viewMoved, setViewMoved] = useState(false);
   const layoutRef = useRef(layout);
   useEffect(() => {
     layoutRef.current = layout;
@@ -421,31 +421,23 @@ export default function NiiVueViewer({
     return () => clearTimeout(t);
   }, [calMin, calMax]);
 
-  // NiiVue DRAG_MODE: 1 = contrast (default), 3 = pan/zoom. In pan mode the
-  // wheel zooms instead of stepping slices, which is why the slice strip stays
-  // the reliable way to move through the stack.
-  useEffect(() => {
-    const nv = nvRef.current;
-    if (!nv) return;
-    nv.opts.dragMode = dragMode === "pan" ? 3 : 1;
-    nv.drawScene?.();
-  }, [dragMode]);
-
   /**
-   * Left-drag to pan.
+   * Left-drag pans the slices, always.
    *
    * NiiVue only records a drag for the right or middle button — a left-drag
-   * just moves the crosshair — so setting dragMode to pan on its own rebinds
-   * the wheel to zoom and nothing else. Nobody reaches for right-drag on a
-   * laptop trackpad, so an overlay takes the pointer while pan is active and
-   * drives NiiVue's own pan maths. Wheel events are forwarded so zoom still
-   * works through it.
+   * just moves the crosshair — and its own pan mode also rebinds the wheel to
+   * zoom, which would cost us slice scrolling. So dragMode stays on the
+   * contrast default (the wheel keeps stepping slices) and an overlay takes
+   * the pointer to drive NiiVue's pan maths directly.
+   *
+   * The overlay steps aside over the 3D render tile, otherwise dragging the
+   * 4-up render would pan the slices instead of rotating the head.
    */
   useEffect(() => {
-    if (dragMode !== "pan") return undefined;
     const el = panOverlayRef.current;
     const nv = nvRef.current;
-    if (!el || !nv?.canvas) return undefined;
+    const container = el?.parentElement;
+    if (!el || !container || !nv?.canvas) return undefined;
 
     let dragging = false;
     let startX = 0;
@@ -455,6 +447,24 @@ export default function NiiVueViewer({
     const relative = (e) => {
       const r = nv.canvas.getBoundingClientRect();
       return [e.clientX - r.left, e.clientY - r.top];
+    };
+
+    const overRenderTile = (x, y) => {
+      const dpr = nv.uiData?.dpr || 1;
+      try {
+        return nv.inRenderTile(x * dpr, y * dpr) >= 0;
+      } catch (err) {
+        return false;
+      }
+    };
+
+    // Watched on the container so it still fires while the overlay is
+    // click-through; that is what lets it switch back on when the pointer
+    // leaves the render tile.
+    const onContainerMove = (e) => {
+      if (dragging) return;
+      const [x, y] = relative(e);
+      el.style.pointerEvents = overRenderTile(x, y) ? "none" : "auto";
     };
 
     const onDown = (e) => {
@@ -477,12 +487,13 @@ export default function NiiVueViewer({
       // setDragStart/setDragEnd store device pixels; match that here.
       nv.dragForPanZoom([startX * dpr, startY * dpr, x * dpr, y * dpr]);
       nv.drawScene();
+      syncViewMoved();
     };
 
     const onUp = (e) => {
       if (dragging && moved < 4) {
         // A tap, not a drag — still place the crosshair so contacts can be
-        // marked without leaving pan mode.
+        // marked without any mode switching.
         const [x, y] = relative(e);
         nv.mouseClick(x, y);
       }
@@ -492,30 +503,50 @@ export default function NiiVueViewer({
       } catch (err) {}
     };
 
+    // Plain wheel keeps stepping slices. Ctrl/Cmd-wheel zooms, matching the
+    // browser gesture — NiiVue only zooms while dragMode is pan, so borrow it
+    // for the one call.
     const onWheel = (e) => {
       e.preventDefault();
+      const wantsZoom = e.ctrlKey || e.metaKey;
+      const prev = nv.opts.dragMode;
+      if (wantsZoom) nv.opts.dragMode = 3;
       nv.wheelListener(e);
+      nv.opts.dragMode = prev;
+      if (wantsZoom) syncViewMoved();
     };
 
+    container.addEventListener("pointermove", onContainerMove);
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => {
+      container.removeEventListener("pointermove", onContainerMove);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("wheel", onWheel);
     };
-  }, [dragMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Show "Reset view" only once the view has actually been moved. */
+  const syncViewMoved = () => {
+    const p = nvRef.current?.scene?.pan2Dxyzmm;
+    if (!p) return;
+    const moved = p[0] !== 0 || p[1] !== 0 || p[2] !== 0 || p[3] !== 1;
+    setViewMoved((prev) => (prev === moved ? prev : moved));
+  };
 
   const resetView = () => {
     const nv = nvRef.current;
     if (!nv) return;
     nv.scene.pan2Dxyzmm = [0, 0, 0, 1];
     nv.drawScene();
+    setViewMoved(false);
   };
 
   useEffect(() => {
@@ -586,18 +617,16 @@ export default function NiiVueViewer({
       )}
       <div className="viewer-container">
         <canvas ref={canvasRef} />
-        {dragMode === "pan" && (
-          <>
-            <div ref={panOverlayRef} className="pan-overlay" />
-            <button
-              type="button"
-              className="btn btn-compact pan-reset"
-              onClick={resetView}
-              title="Recentre and reset zoom"
-            >
-              Reset view
-            </button>
-          </>
+        <div ref={panOverlayRef} className="pan-overlay" />
+        {viewMoved && (
+          <button
+            type="button"
+            className="btn btn-compact pan-reset"
+            onClick={resetView}
+            title="Recentre and reset zoom"
+          >
+            Reset view
+          </button>
         )}
       </div>
     </>

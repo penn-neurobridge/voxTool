@@ -128,8 +128,6 @@ export default function App() {
   const [includeBipolarPairs, setIncludeBipolarPairs] = useState(false);
   const [viewerLayout, setViewerLayout] = useState("multi");
   const [selectedContact, setSelectedContact] = useState(null);
-  // NiiVue drag: "contrast" (default) or "pan" to shove the image around.
-  const [sliceDrag, setSliceDrag] = useState("contrast");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -1374,8 +1372,6 @@ export default function App() {
             onViewerLayoutChange={setViewerLayout}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
-            dragMode={sliceDrag}
-            onDragModeChange={setSliceDrag}
           />
         )}
 
@@ -1399,7 +1395,6 @@ export default function App() {
                 snapThresholdPct={thresholdPct}
                 showRasTags={showRasTags}
                 active={viewerTab === "slices"}
-                dragMode={sliceDrag}
               />
             </div>
             <div
