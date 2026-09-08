@@ -33,7 +33,7 @@ normalised into one schema.
 
 This was the central decision of the planning meeting and it is deliberate.
 
-| | |
+| Boundary | What it covers |
 |---|---|
 | **In scope** | Extracting structured lead definitions from unstructured documents. Normalising vendor-specific formats into VoxTool's schema. |
 | **Out of scope** | Deciding which bright voxel clusters are electrode contacts. Placing or adjusting coordinates. Anything that writes a coordinate without a human clicking it. |
@@ -210,7 +210,7 @@ and a packaging decision justified by those numbers.
 Both are achievable, and the provider interface in Phase 1 means the same
 schema and the same review UI serve both. The differences:
 
-| | Cloud API | Local open-weight |
+| Consideration | Cloud API | Local open-weight |
 |---|---|---|
 | Accuracy | Highest | To be measured (Phase 4) |
 | Cost | Cents per patient — effectively negligible | Zero marginal, one-off engineering |
