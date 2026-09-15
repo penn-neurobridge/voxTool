@@ -79,9 +79,17 @@ Put real documents in `eval/samples/` with a hand-written
 `<name>.expected.json` next to each. **That directory is git-ignored** — these
 are clinical records and the repository is shared.
 
-Current result on the synthetic sample with no model at all: 18/18 leads, 18/18
-contact counts, nothing invented, and the proposed-but-not-implanted lead
-correctly excluded.
+Measured on the synthetic sample (Apple Silicon, qwen2.5:7b-instruct):
+
+| | Leads | Contact counts | Invented | Targets | Rows to review | Time |
+|---|---|---|---|---|---|---|
+| Channel map only | 18/18 | 18/18 | 0 | none | 18 | 0.2 s |
+| With the local model | 18/18 | 18/18 | 0 | all 18 | 0 | 56 s |
+
+Both correctly omit the proposed-but-never-implanted lead. The model earns its
+56 seconds by supplying the anatomical targets and confirming the lead table,
+which drops the rows a human has to check from 18 to 0 — not by finding leads
+the channel map missed.
 
 ## Known gaps
 
