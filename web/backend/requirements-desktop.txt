@@ -5,3 +5,7 @@ flask-cors>=4.0
 nibabel>=5.2
 numpy>=1.26
 waitress>=3.0
+
+# Implant-document extraction (local only; see extraction/).
+pymupdf>=1.24
+python-pptx>=1.0

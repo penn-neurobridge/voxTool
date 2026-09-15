@@ -1121,3 +1121,109 @@ input:focus {
   gap: 8px;
   margin-top: 16px;
 }
+
+/* ── Implant document import ── */
+.modal-wide {
+  max-width: 900px;
+  width: 90vw;
+}
+
+.import-error {
+  color: #f07178;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.import-warning {
+  font-size: 11px;
+  color: #ffc961;
+  background: rgba(255, 180, 0, 0.08);
+  border-left: 2px solid rgba(255, 180, 0, 0.5);
+  padding: 6px 10px;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.import-summary {
+  font-size: 12px;
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+}
+
+.import-table-wrap {
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.import-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.import-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+/* Flagged rows are the whole point of the review step; make them obvious. */
+.import-row-review {
+  background: rgba(255, 180, 0, 0.06);
+}
+
+/* These inputs carry no type attribute, so the global input[type="text"] rule
+   does not reach them and they would render with the browser's white default. */
+.import-cell {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+
+.import-cell:focus {
+  border-color: var(--accent);
+}
+
+.import-cell-name {
+  width: 80px;
+  font-weight: 600;
+}
+
+.import-cell-num {
+  width: 60px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.import-flag,
+.import-note {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.import-flag {
+  color: #ffc961;
+}

@@ -1,0 +1,4 @@
+# Implant documents are clinical records. Nothing in here is committed.
+*
+!.gitignore
+!README.md

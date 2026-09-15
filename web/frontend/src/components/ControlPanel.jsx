@@ -24,6 +24,7 @@ export default function ControlPanel({
   onCancelPending,
   onDeleteContact,
   onDeleteLead,
+  onImportDocument,
   selectedContact,
   onSelectContact,
   onInterpolate,
@@ -366,14 +367,26 @@ export default function ControlPanel({
                 />
               </div>
             </div>
-            <button
-              type="button"
-              className="btn"
-              onClick={addLead}
-              disabled={!newLeadName.trim()}
-            >
-              Add lead
-            </button>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn"
+                onClick={addLead}
+                disabled={!newLeadName.trim()}
+              >
+                Add lead
+              </button>
+              {onImportDocument && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={onImportDocument}
+                  title="Read the lead list from the implant PDF or PowerPoint"
+                >
+                  Read from document…
+                </button>
+              )}
+            </div>
             {leads.length > 0 && (
               <ul className="lead-chip-list">
                 {leads.map((lead) => {

@@ -4,6 +4,8 @@ import Toolbar from "./components/Toolbar";
 import ControlPanel from "./components/ControlPanel";
 import NiiVueViewer from "./components/NiiVueViewer";
 import ThresholdCloudViewer from "./components/ThresholdCloudViewer";
+import DocumentImport from "./components/DocumentImport";
+import { nextColorIndex } from "./leadColors";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -128,6 +130,7 @@ export default function App() {
   const [includeBipolarPairs, setIncludeBipolarPairs] = useState(false);
   const [viewerLayout, setViewerLayout] = useState("multi");
   const [selectedContact, setSelectedContact] = useState(null);
+  const [showImport, setShowImport] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -509,6 +512,34 @@ export default function App() {
     activeLead,
     scanFilename,
   ]);
+
+
+  /**
+   * Apply leads read from an implant document. Same-named leads are replaced
+   * rather than duplicated, and keep their existing colour so a re-import does
+   * not repaint contacts the user has already marked.
+   */
+  const applyImportedLeads = useCallback(
+    (imported) => {
+      setLeads((prev) => {
+        const next = [...prev];
+        for (const lead of imported) {
+          const at = next.findIndex(
+            (l) => l.name.toUpperCase() === lead.name.toUpperCase()
+          );
+          if (at >= 0) {
+            next[at] = { ...next[at], ...lead, colorIndex: next[at].colorIndex };
+          } else {
+            next.push({ ...lead, colorIndex: nextColorIndex(next) });
+          }
+        }
+        return next;
+      });
+      setSelectedLead((cur) => cur || imported[0]?.name || "");
+      setShowImport(false);
+    },
+    []
+  );
 
   const handleDeleteContact = useCallback((idx) => {
     setContacts((prev) => prev.filter((_, i) => i !== idx));
@@ -1294,6 +1325,7 @@ export default function App() {
           onCancelPending={() => setPendingContact(null)}
           onDeleteContact={handleDeleteContact}
           onDeleteLead={handleDeleteLead}
+          onImportDocument={localFiles ? () => setShowImport(true) : null}
           selectedContact={selectedContact}
           onSelectContact={handleSelectContact}
           onInterpolate={handleInterpolate}
@@ -1452,6 +1484,13 @@ export default function App() {
           </span>
         </div>
       </div>
+
+      <DocumentImport
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onConfirm={applyImportedLeads}
+        existingLeads={leads}
+      />
 
       {showPicker && (
         <div className="modal-overlay" onClick={() => setShowPicker(false)}>

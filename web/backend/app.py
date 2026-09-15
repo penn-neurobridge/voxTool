@@ -7,6 +7,7 @@ from flask_cors import CORS
 import local_mode
 from routes.scans import scans_bp
 from routes.annotations import annotations_bp
+from routes.extract import extract_bp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -69,6 +70,8 @@ def create_app():
 
     app.register_blueprint(scans_bp, url_prefix="/api/scans")
     app.register_blueprint(annotations_bp, url_prefix="/api/annotations")
+    # Refuses every request unless VOXTOOL_LOCAL is set; see routes/extract.py.
+    app.register_blueprint(extract_bp, url_prefix="/api/extract")
 
     static_dir = _static_dir()
     app.config["STATIC_DIR"] = static_dir
