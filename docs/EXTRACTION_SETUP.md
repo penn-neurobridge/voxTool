@@ -17,15 +17,17 @@ cannot reach the public demo by accident.
 
 ## Running it
 
-```bash
-cd web/backend
-pip install -r requirements.txt          # adds pymupdf and python-pptx
+From the repository root:
 
-# Serve the built UI with extraction enabled
-VOXTOOL_LOCAL=1 \
-VOXTOOL_STATIC_DIR=../frontend/build \
-PORT=5001 python app.py
+```bash
+./run_demo.sh
 ```
+
+Then open <http://127.0.0.1:5001>. Ctrl-C to stop.
+
+The script creates the Python environment and builds the interface if they are
+missing, starts Ollama if it is installed, and reports what it found. First run
+takes a few minutes; after that it is seconds.
 
 In the app: **Define leads → Read from document…**, choose the PDF or PPTX,
 review the table, press Add.
