@@ -128,15 +128,24 @@ def reconcile(model_leads: list[Lead], channel_counts: dict[str, int]) -> tuple[
 
     out: list[Lead] = []
 
+    unmatched_channel = set(channel_by_key) - set(by_key)
+
     for key, lead in by_key.items():
         mapped = channel_by_key.get(key)
         if mapped is None:
             if channel_counts:
                 lead.confidence = REVIEW
-                lead.notes.append(
-                    "Listed in the document but absent from the channel map, so it "
-                    "may be a proposed lead that was not implanted."
-                )
+                twin = _near_match(key, unmatched_channel)
+                if twin:
+                    lead.notes.append(
+                        f"Not in the channel map, but {channel_names[twin]} is and "
+                        f"uses the same letters — one of the two is probably a typo."
+                    )
+                else:
+                    lead.notes.append(
+                        "Listed in the document but absent from the channel map, so "
+                        "it may be a proposed lead that was not implanted."
+                    )
             out.append(lead)
             continue
 
@@ -147,10 +156,22 @@ def reconcile(model_leads: list[Lead], channel_counts: dict[str, int]) -> tuple[
             lead.contacts = mapped
             lead.confidence = HIGH
             lead.notes.append(f"Contact count taken from the channel map ({mapped}).")
+        elif lead.contacts > mapped:
+            # A channel map cannot list more contacts than an electrode has, but
+            # it can list fewer: with 256 amplifier channels and 22 twelve-contact
+            # leads, the last leads get truncated. The electrode still has all
+            # twelve and all twelve are visible on the CT, so the larger number
+            # is the one to localise against.
+            lead.notes.append(
+                f"{lead.contacts} contacts on the electrode but only {mapped} "
+                f"wired to the amplifier; using {lead.contacts} since the rest "
+                f"are still visible on the scan."
+            )
+            lead.confidence = REVIEW
         else:
             lead.notes.append(
-                f"Document says {lead.contacts} contacts, channel map says {mapped}. "
-                f"Using {mapped}."
+                f"Document says {lead.contacts} contacts, channel map says "
+                f"{mapped}. Using {mapped}."
             )
             lead.contacts = mapped
             lead.confidence = REVIEW
@@ -159,14 +180,22 @@ def reconcile(model_leads: list[Lead], channel_counts: dict[str, int]) -> tuple[
     for key, count in channel_by_key.items():
         if key in by_key:
             continue
-        lead = Lead(
-            name=channel_names[key],
-            contacts=count,
-            sources=["channel_map"],
-            confidence=REVIEW,
-            notes=["Found in the channel map but not in the lead table; target unknown."],
+        twin = _near_match(key, set(by_key) - set(channel_by_key))
+        note = (
+            f"In the channel map but not the lead table. {by_key[twin].name} is in "
+            f"the table and uses the same letters — one of the two is probably a typo."
+            if twin
+            else "Found in the channel map but not in the lead table; target unknown."
         )
-        out.append(lead)
+        out.append(
+            Lead(
+                name=channel_names[key],
+                contacts=count,
+                sources=["channel_map"],
+                confidence=REVIEW,
+                notes=[note],
+            )
+        )
 
     out.sort(key=lambda l: l.name.upper())
     if not model_leads and channel_counts:
@@ -175,3 +204,17 @@ def reconcile(model_leads: list[Lead], channel_counts: dict[str, int]) -> tuple[
             "from the channel map and has no anatomical target."
         )
     return out, warnings
+
+
+def _near_match(name: str, candidates) -> str | None:
+    """Find a candidate that is the same letters in a different order.
+
+    Documents really do contain ``RFp`` in the lead table and ``RPf`` in the
+    channel map. Those are one lead, but merging them automatically would be
+    guessing, so we only point the pair out and let the reviewer decide.
+    """
+    key = sorted(name.upper())
+    for other in candidates:
+        if other != name and sorted(other.upper()) == key:
+            return other
+    return None

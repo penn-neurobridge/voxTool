@@ -81,17 +81,32 @@ Put real documents in `eval/samples/` with a hand-written
 `<name>.expected.json` next to each. **That directory is git-ignored** — these
 are clinical records and the repository is shared.
 
-Measured on the synthetic sample (Apple Silicon, qwen2.5:7b-instruct):
+Measured on six real implant documents (Apple Silicon, qwen2.5:7b-instruct),
+78 leads in total:
 
-| | Leads | Contact counts | Invented | Targets | Rows to review | Time |
-|---|---|---|---|---|---|---|
-| Channel map only | 18/18 | 18/18 | 0 | none | 18 | 0.2 s |
-| With the local model | 18/18 | 18/18 | 0 | all 18 | 0 | 56 s |
+| | Leads found | Contact counts | Invented |
+|---|---|---|---|
+| Channel map only | 76/78 | 74/78 | 1 |
+| With the local model | 78/78 | 78/78 | 1 |
 
-Both correctly omit the proposed-but-never-implanted lead. The model earns its
-56 seconds by supplying the anatomical targets and confirming the lead table,
-which drops the rows a human has to check from 18 to 0 — not by finding leads
-the channel map missed.
+The single "invented" lead is real: one document writes `RFp` in the lead table
+and `RPf` in the channel map. Both are kept and flagged as a probable
+transposition rather than merged, because merging them would be a guess.
+
+What the documents taught us, each of which changed the code:
+
+- **A recording can be shorter than the electrode.** One implant has 22
+  twelve-contact leads, which needs 264 channels against an amplifier's 256, so
+  the last two leads are wired for 8 and 10. The grid cannot list contacts that
+  do not exist but it can list fewer than exist, so the larger number wins and
+  the row is flagged.
+- **Grids contain typos.** One has `LI4` twice where `LI3` belongs, leaving a
+  hole mid-lead. That is reported as a probable mistyped cell, separately from
+  scalp channels, and the count comes from the lead table instead.
+- **Lead tables are sometimes incomplete.** One omits a lead from the final
+  table that is plainly in the channel map. It is kept and flagged.
+- **Not every document has a channel map.** A ROSA/DIXI list has none at all, so
+  the model is the only source — see Known gaps.
 
 ## Known gaps
 

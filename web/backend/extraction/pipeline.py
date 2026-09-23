@@ -33,6 +33,13 @@ def run(path: str, provider: str = "none", model: str | None = None) -> schema.E
         return result
 
     mapped = channel_map.parse(text)
+    for name, nums in sorted(mapped.gapped.items()):
+        missing = [n for n in range(1, nums[-1] + 1) if n not in nums]
+        result.warnings.append(
+            f"{name} runs 1–{nums[-1]} in the channel map but contact "
+            f"{', '.join(str(m) for m in missing)} is missing, which usually means a "
+            f"mistyped cell. Its contact count could not be confirmed from the grid."
+        )
     if mapped.rejected:
         listed = ", ".join(
             f"{name} ({', '.join(str(n) for n in nums)})"

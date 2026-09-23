@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # A contact token: letters then digits, e.g. LA12, ROf3, RC1.
 _TOKEN = re.compile(r"\b([A-Za-z]{1,4})(\d{1,2})\b")
@@ -49,6 +49,11 @@ class ChannelMapLead:
 class ChannelMapResult:
     leads: list[ChannelMapLead]
     rejected: dict[str, list[int]]  # prefix -> numbers seen, for human review
+    # Looks like a real lead but has a hole in its numbering, which in practice
+    # means a mistyped label in the grid rather than a scalp channel. Reported
+    # separately so the warning can say which contact is missing instead of
+    # calling it a reference electrode.
+    gapped: dict[str, list[int]] = field(default_factory=dict)
 
     def as_counts(self) -> dict[str, int]:
         return {lead.name: lead.contacts for lead in self.leads}
@@ -70,6 +75,7 @@ def parse(text: str) -> ChannelMapResult:
 
     leads: list[ChannelMapLead] = []
     rejected: dict[str, list[int]] = {}
+    gapped: dict[str, list[int]] = {}
 
     for key, numbers in numbers_by_key.items():
         ordered = sorted(numbers)
@@ -86,11 +92,15 @@ def parse(text: str) -> ChannelMapResult:
                     numbers=ordered,
                 )
             )
+        elif highest >= _MIN_CONTACTS and 1 in numbers:
+            # Starts at 1 and is long enough to be a lead, but something is
+            # missing in the middle: a mistyped cell, not a scalp channel.
+            gapped[_canonical(spellings[key])] = ordered
         else:
             rejected[_canonical(spellings[key])] = ordered
 
     leads.sort(key=lambda l: l.name)
-    return ChannelMapResult(leads=leads, rejected=rejected)
+    return ChannelMapResult(leads=leads, rejected=rejected, gapped=gapped)
 
 
 def _canonical(counter: Counter) -> str:

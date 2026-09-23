@@ -58,12 +58,38 @@ class TestReconcile:
         assert leads[0].confidence == schema.HIGH
         assert leads[0].sources == ["document", "channel_map"]
 
-    def test_channel_map_wins_a_count_conflict_but_flags_it(self):
-        model, _ = schema.normalise_model_leads([{"name": "LB", "contacts": 12}])
-        leads, _ = schema.reconcile(model, {"LB": 8})
-        assert leads[0].contacts == 8
+    def test_truncated_recording_keeps_the_electrode_count(self):
+        # 256 amplifier channels across 22 twelve-contact leads means the last
+        # leads get fewer channels than they have contacts. The contacts still
+        # exist on the CT, so the table's larger number is the one to localise.
+        model, _ = schema.normalise_model_leads([{"name": "RL", "contacts": 12}])
+        leads, _ = schema.reconcile(model, {"RL": 8})
+        assert leads[0].contacts == 12
         assert leads[0].confidence == schema.REVIEW
-        assert "12" in leads[0].notes[0] and "8" in leads[0].notes[0]
+        assert "wired to the amplifier" in leads[0].notes[0]
+
+    def test_channel_map_wins_when_it_has_more_contacts(self):
+        # The grid cannot enumerate contacts that do not exist, so a larger
+        # count there means the table is wrong.
+        model, _ = schema.normalise_model_leads([{"name": "LB", "contacts": 8}])
+        leads, _ = schema.reconcile(model, {"LB": 12})
+        assert leads[0].contacts == 12
+        assert leads[0].confidence == schema.REVIEW
+
+    def test_transposed_name_is_pointed_out_rather_than_merged(self):
+        # A real document had RFp in the lead table and RPf in the channel map.
+        model, _ = schema.normalise_model_leads([{"name": "RFp", "contacts": 12}])
+        leads, _ = schema.reconcile(model, {"RPf": 12})
+        assert len(leads) == 2, "must not silently merge two differently spelled leads"
+        assert all("typo" in " ".join(l.notes) for l in leads)
+
+    def test_gap_in_the_grid_is_separated_from_scalp_channels(self):
+        # LI3 mistyped as a second LI4 in a real document.
+        text = " ".join(f"LI{i}" for i in [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+        result = channel_map.parse(text + " C3 C4")
+        assert "LI" in result.gapped, "a hole mid-lead is a typo, not a scalp channel"
+        assert "C" in result.rejected
+        assert "LI" not in result.as_counts()
 
     def test_proposed_lead_missing_from_the_map_is_kept_and_flagged(self):
         # The case that motivated all of this: a planned lead never implanted.
