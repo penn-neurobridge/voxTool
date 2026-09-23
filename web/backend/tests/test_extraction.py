@@ -141,3 +141,31 @@ class TestNormalise:
         )
         assert len(leads) == 1 and leads[0].contacts == 12
         assert warnings
+
+
+class TestUnnumberedGrid:
+    """One site writes the grid as the bare label repeated once per contact."""
+
+    def test_counts_repeats_when_there_are_no_contact_numbers(self):
+        grid = "\t".join(["LI"] * 12 + ["LA"] * 4)
+        grid += "\n" + "\t".join(["LA"] * 8 + ["LB"] * 8)
+        counts = channel_map.parse(grid).as_counts()
+        assert counts == {"LI": 12, "LA": 12, "LB": 8}
+
+    def test_lead_table_rows_are_not_counted_as_contacts(self):
+        # The lead table mentions LI once; only the wide grid row counts.
+        text = "LI\tLeft Temporal Pole\t8\tBlue 8\t12\n"
+        text += "\t".join(["LI"] * 12 + ["LA"] * 4)
+        assert channel_map.parse(text).as_counts()["LI"] == 12
+
+    def test_a_reference_marker_does_not_disqualify_a_lead(self):
+        # "Ref: LF10" must not stop LF being counted from the unnumbered grid.
+        text = "Ref: LF10\nGr: LU9\n"
+        text += "\t".join(["LF"] * 12 + ["LU"] * 4) + "\n"
+        text += "\t".join(["LU"] * 8 + ["LF"] * 8)
+        counts = channel_map.parse(text).as_counts()
+        assert counts == {"LF": 20, "LU": 12}
+
+    def test_a_normal_numbered_grid_is_unaffected(self):
+        text = " ".join(f"LA{i}" for i in range(1, 13))
+        assert channel_map.parse(text).as_counts() == {"LA": 12}

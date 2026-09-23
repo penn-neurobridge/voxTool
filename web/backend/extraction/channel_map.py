@@ -99,8 +99,54 @@ def parse(text: str) -> ChannelMapResult:
         else:
             rejected[_canonical(spellings[key])] = ordered
 
+    # Fill in any lead the numbered pass did not accept. Exclusion is by
+    # accepted lead, not by "was seen with a digit anywhere": a document that
+    # notes `Ref: LF10` would otherwise disqualify LF from the unnumbered count
+    # on the strength of the reference marker alone. A normal numbered grid has
+    # no bare-label rows, so this contributes nothing there.
+    accepted = {l.name.upper() for l in leads}
+    for name, count in _unnumbered_counts(text).items():
+        if name.upper() in accepted or count < _MIN_CONTACTS:
+            continue
+        leads.append(
+            ChannelMapLead(name=name, contacts=count, numbers=list(range(1, count + 1)))
+        )
+        rejected.pop(name, None)
+        gapped.pop(name, None)
+
     leads.sort(key=lambda l: l.name)
     return ChannelMapResult(leads=leads, rejected=rejected, gapped=gapped)
+
+
+# A cell holding only a lead label, with no contact number after it.
+_BARE = re.compile(r"^[A-Za-z]{1,4}$")
+
+# A grid row has one cell per amplifier channel, so it is wide. Narrower rows
+# are prose or lead-table rows and must not be counted.
+_MIN_GRID_CELLS = 8
+
+
+def _unnumbered_counts(text: str) -> Counter:
+    """Count repeats in grids that omit the contact number.
+
+    One site writes the grid as ``LI LI LI ... LA LA LA`` — the label repeated
+    once per contact, with the number implied by the column. Counting repeats
+    recovers the contact count, but only on rows that are almost entirely bare
+    labels: otherwise the single ``LI`` in the lead table, or a lead name in a
+    sentence, would be counted as another contact.
+    """
+    counts: Counter = Counter()
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.split("\t") if c.strip()]
+        if len(cells) < _MIN_GRID_CELLS:
+            continue
+        bare = [c for c in cells if _BARE.match(c)]
+        if len(bare) < 0.9 * len(cells):
+            continue
+        for cell in bare:
+            if cell.upper() not in _NON_DEPTH:
+                counts[cell] += 1
+    return counts
 
 
 def _canonical(counter: Counter) -> str:

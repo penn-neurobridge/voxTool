@@ -81,38 +81,48 @@ Put real documents in `eval/samples/` with a hand-written
 `<name>.expected.json` next to each. **That directory is git-ignored** — these
 are clinical records and the repository is shared.
 
-Measured on six real implant documents (Apple Silicon, qwen2.5:7b-instruct),
-78 leads in total:
+Measured on eleven real implant documents (Apple Silicon,
+qwen2.5:7b-instruct). Ten share one format and carry 144 leads between them:
 
-| | Leads found | Contact counts | Invented |
+| | Leads found | Contact counts | Flagged |
 |---|---|---|---|
-| Channel map only | 76/78 | 74/78 | 1 |
-| With the local model | 78/78 | 78/78 | 1 |
+| Channel map only | 142/144 | 140/144 | 1 |
+| With the local model | **144/144** | **144/144** | 1 |
 
-The single "invented" lead is real: one document writes `RFp` in the lead table
-and `RPf` in the channel map. Both are kept and flagged as a probable
-transposition rather than merged, because merging them would be a guess.
+Four of the ten (sub-01, 02, 07, 08) were held out and never looked at while
+the rules were being written. Three of those four scored perfectly with no code
+changes at all; the fourth exposed a grid format that needed new handling. The
+one flagged lead is a document that writes `RFp` in its lead table and `RPf` in
+its grid — kept as two rows and marked as a probable transposition, because
+merging them would be a guess.
 
-What the documents taught us, each of which changed the code:
+Each of these came from a document and changed the code:
 
 - **A recording can be shorter than the electrode.** One implant has 22
-  twelve-contact leads, which needs 264 channels against an amplifier's 256, so
-  the last two leads are wired for 8 and 10. The grid cannot list contacts that
-  do not exist but it can list fewer than exist, so the larger number wins and
-  the row is flagged.
-- **Grids contain typos.** One has `LI4` twice where `LI3` belongs, leaving a
-  hole mid-lead. That is reported as a probable mistyped cell, separately from
-  scalp channels, and the count comes from the lead table instead.
-- **Lead tables are sometimes incomplete.** One omits a lead from the final
-  table that is plainly in the channel map. It is kept and flagged.
-- **Not every document has a channel map.** A ROSA/DIXI list has none at all, so
-  the model is the only source — see Known gaps.
+  twelve-contact leads, needing 264 channels against an amplifier's 256, so the
+  last two are wired for 8 and 10. A grid cannot list contacts that do not
+  exist but it can list fewer than exist, so the larger count wins.
+- **Grids contain typos.** One has `LI4` twice where `LI3` belongs. That is
+  reported as a probable mistyped cell, separately from scalp channels.
+- **Lead tables are sometimes incomplete.** One omits a lead that is plainly in
+  the grid. It is kept and flagged.
+- **Some grids have no contact numbers**, repeating the bare label once per
+  contact (`LI LI LI …`). The repeats are counted, but only on rows that are
+  almost entirely bare labels.
+- **Reference markers look like contacts.** `Ref: LF10` on the lead-table slide
+  must not disqualify LF from being counted, and `RA5` in a green cell is a
+  reference, not a five-contact lead.
 
 ## Known gaps
 
 - **Scanned pages are reported, not read.** Pages with no text layer are listed
   in a warning so a short lead list cannot be mistaken for a complete one. OCR
-  is not wired up.
+  is not wired up. One of the eleven documents (sub-11) is a pure image with no
+  text layer anywhere, so the tool currently extracts nothing from it at all.
+- **One document uses a different system entirely** (sub-11: ROSA/DIXI, no
+  channel map, electrodes named `1. aMTG-Amyg`). Those names will not survive
+  VoxTool's save format, and it lists both implanted and intracerebral contact
+  counts. Undecided pending the lab's convention.
 - **Lead type** defaults to depth. Grids and strips need the model, or manual
   correction in the review screen.
 - Only PDF and PPTX. Images are refused with a clear message.
