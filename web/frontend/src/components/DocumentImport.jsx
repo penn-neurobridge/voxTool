@@ -17,10 +17,19 @@ export default function DocumentImport({ open, onClose, onConfirm, existingLeads
   const [status, setStatus] = useState(null);
   const [provider, setProvider] = useState("none");
   const [busy, setBusy] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [rows, setRows] = useState([]);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!busy) return undefined;
+    setElapsed(0);
+    const started = Date.now();
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
 
   useEffect(() => {
     if (!open) return;
@@ -135,13 +144,26 @@ export default function DocumentImport({ open, onClose, onConfirm, existingLeads
                 disabled={busy}
               >
                 <option value="none">
-                  Channel map only — no model needed, gives no anatomical targets
+                  Channel map only — instant, but no anatomical targets
                 </option>
                 <option value="ollama" disabled={!status?.providers?.ollama}>
-                  Local model{status?.providers?.ollama ? "" : " (Ollama not running)"}
+                  Local model — adds anatomical targets, takes 30–60s
+                  {status?.providers?.ollama ? "" : " (Ollama not running)"}
                 </option>
               </select>
             </div>
+            {busy && (
+              <p className="import-progress">
+                Reading the document… {elapsed}s
+                {provider === "ollama" && (
+                  <span className="muted">
+                    {" "}
+                    — the local model usually takes 30–60 seconds, longer for a
+                    big implant. Nothing is being uploaded.
+                  </span>
+                )}
+              </p>
+            )}
             <div className="modal-actions modal-actions-scan">
               <button className="btn" onClick={onClose} disabled={busy}>
                 Cancel

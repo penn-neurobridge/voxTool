@@ -34,7 +34,7 @@ fi
 if command -v ollama >/dev/null 2>&1; then
   if ! curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
     say "Starting Ollama…"
-    ollama serve >/tmp/voxtool-ollama.log 2>&1 &
+    OLLAMA_KEEP_ALIVE="${OLLAMA_KEEP_ALIVE:-2h}" ollama serve >/tmp/voxtool-ollama.log 2>&1 &
     for _ in $(seq 1 30); do
       curl -sf http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
       sleep 1

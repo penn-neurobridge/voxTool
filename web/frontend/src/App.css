@@ -1227,3 +1227,11 @@ input:focus {
 .import-flag {
   color: #ffc961;
 }
+
+.import-progress {
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
