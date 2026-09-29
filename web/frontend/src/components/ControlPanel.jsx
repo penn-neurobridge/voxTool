@@ -25,6 +25,7 @@ export default function ControlPanel({
   onDeleteContact,
   onDeleteLead,
   onImportDocument,
+  onUploadPennsieve,
   selectedContact,
   onSelectContact,
   onInterpolate,
@@ -457,6 +458,17 @@ export default function ControlPanel({
           >
             {saving ? "Saving…" : "Save as…"}
           </button>
+          {onUploadPennsieve && (
+            <button
+              type="button"
+              className="btn"
+              onClick={onUploadPennsieve}
+              disabled={!scanLoaded}
+              title="Send the finished annotations to a Pennsieve dataset"
+            >
+              Upload to Pennsieve…
+            </button>
+          )}
           <label className="checkbox-inline footer-checkbox">
             <input
               type="checkbox"

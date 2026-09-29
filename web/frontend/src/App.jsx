@@ -5,6 +5,7 @@ import ControlPanel from "./components/ControlPanel";
 import NiiVueViewer from "./components/NiiVueViewer";
 import ThresholdCloudViewer from "./components/ThresholdCloudViewer";
 import DocumentImport from "./components/DocumentImport";
+import PennsieveUpload from "./components/PennsieveUpload";
 import { nextColorIndex } from "./leadColors";
 
 const API = process.env.REACT_APP_API_URL || "";
@@ -131,6 +132,7 @@ export default function App() {
   const [viewerLayout, setViewerLayout] = useState("multi");
   const [selectedContact, setSelectedContact] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  const [pennsieveDoc, setPennsieveDoc] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -797,6 +799,18 @@ export default function App() {
     setSaving(false);
   }, [scanFilename, leads, contacts, buildExportDocument, writeAnnotationFile]);
 
+
+  /** Build the export document, then hand it to the Pennsieve dialog. */
+  const openPennsieve = useCallback(async () => {
+    if (!scanFilename) return;
+    if (!leads.length && !contacts.length) {
+      alert("Nothing to upload yet — annotate some contacts first.");
+      return;
+    }
+    const doc = await buildExportDocument();
+    if (doc) setPennsieveDoc(doc);
+  }, [scanFilename, leads.length, contacts.length, buildExportDocument]);
+
   /** Apply a loaded annotation document (legacy or web formats). */
   const applyAnnotationDocument = useCallback(
     async (raw) => {
@@ -1326,6 +1340,7 @@ export default function App() {
           onDeleteContact={handleDeleteContact}
           onDeleteLead={handleDeleteLead}
           onImportDocument={localFiles ? () => setShowImport(true) : null}
+          onUploadPennsieve={localFiles ? openPennsieve : null}
           selectedContact={selectedContact}
           onSelectContact={handleSelectContact}
           onInterpolate={handleInterpolate}
@@ -1484,6 +1499,14 @@ export default function App() {
           </span>
         </div>
       </div>
+
+      <PennsieveUpload
+        open={!!pennsieveDoc}
+        onClose={() => setPennsieveDoc(null)}
+        document={pennsieveDoc}
+        scanFilename={scanFilename}
+        counts={{ leads: leads.length, contacts: contacts.length }}
+      />
 
       <DocumentImport
         open={showImport}

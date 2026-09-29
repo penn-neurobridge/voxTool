@@ -8,6 +8,7 @@ import local_mode
 from routes.scans import scans_bp
 from routes.annotations import annotations_bp
 from routes.extract import extract_bp
+from routes.pennsieve import pennsieve_bp
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,6 +73,7 @@ def create_app():
     app.register_blueprint(annotations_bp, url_prefix="/api/annotations")
     # Refuses every request unless VOXTOOL_LOCAL is set; see routes/extract.py.
     app.register_blueprint(extract_bp, url_prefix="/api/extract")
+    app.register_blueprint(pennsieve_bp, url_prefix="/api/pennsieve")
 
     static_dir = _static_dir()
     app.config["STATIC_DIR"] = static_dir

@@ -126,3 +126,35 @@ Each of these came from a document and changed the code:
 - **Lead type** defaults to depth. Grids and strips need the model, or manual
   correction in the review screen.
 - Only PDF and PPTX. Images are refused with a clear message.
+
+## Uploading to Pennsieve
+
+`Upload to Pennsieve…` next to **Save as…** sends the finished annotations to a
+Pennsieve dataset. Desktop only, for the same reason as extraction: the cloud
+build has no authentication, and this endpoint would let anyone who found it
+push files using this machine's Pennsieve credentials.
+
+It drives the `pennsieve` CLI rather than the REST API. The agent already does
+chunked, resumable uploads and owns the credentials in `~/.pennsieve/config.ini`,
+so VoxTool never sees an API key and cannot leak one into a log. If the agent is
+not running the dialog says so and offers to start it.
+
+**Sending is opt-in.** The dialog previews by default — it reports the exact
+destination and sends nothing until "Actually send it" is ticked. The server
+defaults `dry_run` to true as well, so a mis-wired button cannot upload.
+
+**The destination is always shown**: workspace, dataset, folder, filename.
+Whatever lands in a dataset inherits that dataset's permissions, so choosing the
+dataset *is* the access decision and must never be implicit.
+
+Filenames are derived from the scan and stamped with the time —
+`sub-03_ct.nii.gz` becomes `sub-03_voxel_coordinates_20260929-1804.json`. There
+is deliberately no overwrite: re-annotating a subject adds a file rather than
+replacing one, because losing an earlier annotation is worse than keeping two.
+
+### Not done yet
+
+- Only the coordinates are uploaded, not the CT or the implant document.
+- Pulling a scan *from* Pennsieve to annotate is not implemented.
+- API keys are per-workspace in Pennsieve, so working in a different workspace
+  needs a new key and a second profile (`pennsieve profile create`).
