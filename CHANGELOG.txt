@@ -1,3 +1,21 @@
+** 10/7/2026 : v1.1.0 (unreleased) **
+- Read an implant document (PDF or PowerPoint) into the lead definitions:
+  names and contact counts from the channel map, and anatomical targets with
+  the optional local model (needs Ollama). Everything is shown for review and
+  flagged where the document disagrees with itself before anything is added.
+- Pennsieve (desktop only; needs the Pennsieve agent installed):
+  - Upload finished annotations to a dataset as JSON, TXT in the layout of the
+    lab's electrodes.txt, or both. The folder defaults to
+    derivatives/voxtool_ct and can be typed, pasted as a Pennsieve ID, or
+    picked by browsing. Previews by default; only datasets you can edit are
+    offered.
+  - Open a CT straight from Pennsieve, by browsing or by its ID.
+  - Connect to Pennsieve, switch workspace and remove saved keys from inside
+    VoxTool, without the terminal.
+  - Limit a computer to chosen datasets.
+- Save as .txt writes a depth lead's size as "N 1", matching the lab's
+  electrodes.txt files.
+
 ** 7/29/2026 : v1.0.7 **
 - Single-plane Axial/Coronal/Sagittal views now have a slice navigator: slider,
   prev/next buttons, and a "Axial slice 122 / 242" readout. Up/Down and
