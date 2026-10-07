@@ -100,6 +100,9 @@ class TestBrowse:
         with pytest.raises(PennsieveError, match="not in the chosen dataset"):
             pennsieve_api.browse(OTHER, "N:collection:ct")
 
+    def test_folder_id_resolves_to_its_path(self, api):
+        assert pennsieve_api.folder_path(DATASET, "N:collection:ct") == "primary/sub-03/ct"
+
     def test_allow_list_blocks_other_datasets(self, api):
         api.monkeypatch.setenv("VOXTOOL_PENNSIEVE_DATASETS", DATASET)
         with pytest.raises(PennsieveError, match="outside the datasets"):

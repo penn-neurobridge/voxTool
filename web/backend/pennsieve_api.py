@@ -188,6 +188,15 @@ def browse(dataset_id: str, folder_id: str = "") -> dict:
     return {"dataset": dataset_id, "path": path, "items": items}
 
 
+def folder_path(dataset_id: str, folder_id: str) -> str:
+    """`N:collection:…` -> `derivatives/voxtool_ct`, checked to be in the dataset.
+
+    Uploads still go by path, because the CLI's --target_path takes nothing
+    else; Pennsieve matches each part to an existing folder by name.
+    """
+    return "/".join(p["name"] for p in browse(dataset_id, folder_id)["path"])
+
+
 def downloads_dir() -> str:
     path = os.path.join(local_mode.app_data_dir(), "pennsieve-downloads")
     os.makedirs(path, exist_ok=True)

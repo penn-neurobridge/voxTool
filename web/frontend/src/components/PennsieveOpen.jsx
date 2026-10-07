@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import PennsieveBrowser from "./PennsieveBrowser";
 
 const API = process.env.REACT_APP_API_URL || "";
-
-function formatSize(bytes) {
-  if (bytes == null) return "";
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${bytes} B`;
-}
 
 /**
  * Open a CT straight from Pennsieve: browse a dataset's folders, or paste a
@@ -17,18 +11,13 @@ function formatSize(bytes) {
 export default function PennsieveOpen({ open, onClose, onOpened }) {
   const [status, setStatus] = useState(null);
   const [dataset, setDataset] = useState("");
-  const [folder, setFolder] = useState("");
-  const [listing, setListing] = useState(null);
   const [packageId, setPackageId] = useState("");
-  const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setError("");
-    setListing(null);
-    setFolder("");
     setDownloading(null);
     fetch(`${API}/api/pennsieve/status?auto_start=1`)
       .then((r) => r.json())
@@ -40,27 +29,6 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
       })
       .catch((e) => setError(`Could not reach Pennsieve: ${e.message || e}`));
   }, [open]);
-
-  useEffect(() => {
-    if (!open || !dataset) return;
-    let cancelled = false;
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({ dataset });
-    if (folder) params.set("folder", folder);
-    fetch(`${API}/api/pennsieve/browse?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (cancelled) return;
-        if (!d.success) throw new Error(d.error);
-        setListing(d);
-      })
-      .catch((e) => !cancelled && setError(e.message || String(e)))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [open, dataset, folder]);
 
   const openPackage = useCallback(
     async (id, label) => {
@@ -88,7 +56,7 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
   if (!open) return null;
 
   const blocked = status && (!status.installed || !status.agent_running);
-  const busy = loading || !!downloading;
+  const busy = !!downloading;
 
   return (
     <div className="modal-overlay" onClick={busy ? undefined : onClose}>
@@ -117,15 +85,7 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
 
             <div className="field">
               <label>Dataset</label>
-              <select
-                value={dataset}
-                onChange={(e) => {
-                  setDataset(e.target.value);
-                  setFolder("");
-                  setListing(null);
-                }}
-                disabled={busy}
-              >
+              <select value={dataset} onChange={(e) => setDataset(e.target.value)} disabled={busy}>
                 <option value="">— choose a dataset —</option>
                 {(status.datasets || []).map((d) => (
                   <option key={d.id} value={d.id}>
@@ -135,66 +95,12 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
               </select>
             </div>
 
-            {dataset && (
-              <>
-                <div className="pennsieve-crumbs">
-                  <button type="button" disabled={busy || !folder} onClick={() => setFolder("")}>
-                    {status.datasets?.find((d) => d.id === dataset)?.name || "Dataset"}
-                  </button>
-                  {(listing?.path || []).map((p, i, all) => (
-                    <span key={p.id}>
-                      /{" "}
-                      <button
-                        type="button"
-                        disabled={busy || i === all.length - 1}
-                        onClick={() => setFolder(p.id)}
-                      >
-                        {p.name}
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                <div className="pennsieve-list">
-                  {loading && <div className="pennsieve-row muted">Loading…</div>}
-                  {!loading && listing?.items?.length === 0 && (
-                    <div className="pennsieve-row muted">This folder is empty.</div>
-                  )}
-                  {!loading &&
-                    (listing?.items || []).map((item) =>
-                      item.folder ? (
-                        <div
-                          key={item.id}
-                          className="pennsieve-row pennsieve-row-folder"
-                          onClick={() => !busy && setFolder(item.id)}
-                        >
-                          <span className="pennsieve-row-name">{item.name}/</span>
-                        </div>
-                      ) : (
-                        <div
-                          key={item.id}
-                          className={`pennsieve-row ${item.scan ? "" : "pennsieve-row-other"}`}
-                        >
-                          <span className="pennsieve-row-name" title={item.id}>
-                            {item.name}
-                          </span>
-                          <span className="pennsieve-row-size">{formatSize(item.bytes)}</span>
-                          {item.scan && (
-                            <button
-                              type="button"
-                              className="btn btn-compact btn-primary"
-                              disabled={busy}
-                              onClick={() => openPackage(item.id, item.name)}
-                            >
-                              Open
-                            </button>
-                          )}
-                        </div>
-                      )
-                    )}
-                </div>
-              </>
-            )}
+            <PennsieveBrowser
+              dataset={dataset}
+              datasetName={status.datasets?.find((d) => d.id === dataset)?.name}
+              busy={busy}
+              onOpenFile={(item) => openPackage(item.id, item.name)}
+            />
 
             <form
               className="field"

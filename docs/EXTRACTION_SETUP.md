@@ -188,6 +188,14 @@ Filenames are derived from the scan and stamped with the time —
 is deliberately no overwrite: re-annotating a subject adds a file rather than
 replacing one, because losing an earlier annotation is worse than keeping two.
 
+**Choosing the folder.** The folder box takes a path, a folder's Pennsieve ID
+(`N:collection:…`), or a pick from **Browse…**, the same folder browser as
+opening a scan. A pasted ID is shown as its path before anything is sent, and
+the server looks it up again at upload time, against the chosen dataset, rather
+than trusting a path the client worked out. The upload itself still goes by
+path, because the CLI's `--target_path` takes nothing else; Pennsieve matches
+each part to the existing folder of that name.
+
 ## Opening a scan from Pennsieve
 
 **Load a CT Scan → From Pennsieve…** browses a dataset's folders, or takes a
@@ -230,10 +238,6 @@ PennEPI00049 was refused by the dataset lock.
   app stores it as `[1, N]`. Whether the TXT should be named exactly
   `electrodes.txt` is still open; Pennsieve would then keep re-uploads as
   `electrodes (1).txt` rather than replacing the file.
-- Choosing an upload destination by its Pennsieve ID, or from the folder
-  browser, is not done; the upload still takes a typed path, since
-  `--target_path` takes nothing else. The browser's REST calls give the path
-  for any folder ID, which is what that needs.
 - The desktop installer has not been rebuilt with `grpcio` and `protobuf`; the
   PyInstaller spec names the new modules, but a packaged build is untested.
 - API keys are per-workspace in Pennsieve, so working in a different workspace

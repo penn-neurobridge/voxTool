@@ -145,6 +145,17 @@ def upload():
     if "txt" in formats and not (isinstance(txt, str) and txt.strip()):
         return jsonify({"success": False, "error": "No TXT to upload — no marked contacts."}), 400
 
+    # A folder given by ID is resolved here, against the chosen dataset, rather
+    # than trusting a path the client worked out.
+    folder_id = (body.get("target_folder_id") or "").strip()
+    if folder_id:
+        try:
+            target_path = pennsieve_api.folder_path(dataset_id, folder_id)
+        except pennsieve_sync.PennsieveError as e:
+            return jsonify({"success": False, "error": str(e)}), 502
+        except Exception as e:  # noqa: BLE001
+            return _unexpected(e)
+
     when = time.time()
     contents = {}
     if "json" in formats:

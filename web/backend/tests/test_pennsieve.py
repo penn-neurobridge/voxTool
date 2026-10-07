@@ -278,6 +278,38 @@ class TestRoute:
         assert os.path.splitext(names[0])[0] == os.path.splitext(names[1])[0]
         assert names[0].startswith("sub-03_voxel_coordinates_")
 
+    def test_folder_id_is_resolved_on_the_server(self, client, fake):
+        import pennsieve_api
+
+        seen = []
+
+        def resolve(dataset_id, folder_id):
+            seen.append((dataset_id, folder_id))
+            return "derivatives/voxtool_ct"
+
+        fake.monkeypatch.setattr(pennsieve_api, "folder_path", resolve)
+        r = client.post("/api/pennsieve/upload", json={
+            "document": self.DOC, "dataset_id": SANDBOX, "dry_run": False,
+            # A client-side path is ignored when a folder ID is given.
+            "target_path": "somewhere/else", "target_folder_id": "N:collection:vt"})
+        assert r.get_json()["target_path"] == "derivatives/voxtool_ct"
+        assert seen == [(SANDBOX, "N:collection:vt")]
+        (manifest,) = fake.manifests().values()
+        assert manifest["files"][0]["target"] == "derivatives/voxtool_ct"
+
+    def test_folder_id_from_elsewhere_sends_nothing(self, client, fake):
+        import pennsieve_api
+
+        def refuse(dataset_id, folder_id):
+            raise pennsieve_sync.PennsieveError("That folder is not in the chosen dataset.")
+
+        fake.monkeypatch.setattr(pennsieve_api, "folder_path", refuse)
+        r = client.post("/api/pennsieve/upload", json={
+            "document": self.DOC, "dataset_id": SANDBOX, "dry_run": False,
+            "target_folder_id": "N:collection:elsewhere"})
+        assert r.status_code == 502
+        assert fake.calls() == []
+
     def test_txt_without_text_is_refused(self, client, fake):
         r = client.post("/api/pennsieve/upload", json={
             "document": self.DOC, "dataset_id": SANDBOX, "formats": ["txt"], "txt": ""})

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import PennsieveBrowser from "./PennsieveBrowser";
 
 const API = process.env.REACT_APP_API_URL || "";
+const FOLDER_ID = /^N:collection:\S+$/;
 
 /**
  * Send the finished annotations to Pennsieve.
@@ -17,7 +19,10 @@ const API = process.env.REACT_APP_API_URL || "";
 export default function PennsieveUpload({ open, onClose, document, txt, scanFilename, counts }) {
   const [status, setStatus] = useState(null);
   const [dataset, setDataset] = useState("");
+  // A path like derivatives/voxtool_ct, or a pasted folder ID (N:collection:…).
   const [targetPath, setTargetPath] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+  const [folderHint, setFolderHint] = useState(null);
   // JSON is VoxTool's full record; TXT is the lab's electrodes.txt layout.
   const [format, setFormat] = useState("both");
   const [reallySend, setReallySend] = useState(false);
@@ -25,12 +30,15 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
+  const folderId = FOLDER_ID.test(targetPath.trim()) ? targetPath.trim() : "";
+
   useEffect(() => {
     if (!open) return;
     setError("");
     setResult(null);
     setReallySend(false);
     setDataset("");
+    setBrowsing(false);
     // The lab keeps VoxTool output here, beside the other derivatives.
     setTargetPath("derivatives/voxtool_ct");
     fetch(`${API}/api/pennsieve/status?auto_start=1`)
@@ -38,6 +46,29 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
       .then(setStatus)
       .catch((e) => setError(`Could not reach Pennsieve: ${e.message || e}`));
   }, [open]);
+
+  // Say which folder a pasted ID is before anything is sent. The server looks
+  // it up again at upload time, so this is only for the person choosing.
+  useEffect(() => {
+    setFolderHint(null);
+    if (!open || !dataset || !folderId) return;
+    let cancelled = false;
+    const params = new URLSearchParams({ dataset, folder: folderId });
+    fetch(`${API}/api/pennsieve/browse?${params}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        setFolderHint(
+          d.success
+            ? { path: d.path.map((p) => p.name).join("/") }
+            : { error: d.error }
+        );
+      })
+      .catch((e) => !cancelled && setFolderHint({ error: e.message || String(e) }));
+    return () => {
+      cancelled = true;
+    };
+  }, [open, dataset, folderId]);
 
   const send = useCallback(async () => {
     setBusy(true);
@@ -52,7 +83,8 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
           formats: format === "both" ? ["json", "txt"] : [format],
           scan_filename: scanFilename,
           dataset_id: dataset,
-          target_path: targetPath,
+          target_path: folderId ? "" : targetPath,
+          target_folder_id: folderId || undefined,
           dry_run: !reallySend,
         }),
         signal: AbortSignal.timeout(600_000),
@@ -65,7 +97,7 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
     } finally {
       setBusy(false);
     }
-  }, [document, txt, format, scanFilename, dataset, targetPath, reallySend]);
+  }, [document, txt, format, scanFilename, dataset, targetPath, folderId, reallySend]);
 
   if (!open) return null;
 
@@ -106,7 +138,10 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
               <label>Dataset</label>
               <select
                 value={dataset}
-                onChange={(e) => setDataset(e.target.value)}
+                onChange={(e) => {
+                  setDataset(e.target.value);
+                  setBrowsing(false);
+                }}
                 disabled={busy}
               >
                 <option value="">— choose a dataset —</option>
@@ -124,15 +159,48 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
             </div>
 
             <div className="field">
-              <label>Folder in the dataset</label>
-              <input
-                type="text"
-                value={targetPath}
-                placeholder="derivatives/voxtool_ct"
-                onChange={(e) => setTargetPath(e.target.value)}
-                disabled={busy}
-              />
+              <label>Folder in the dataset — a path, or a folder's Pennsieve ID</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  style={{ flex: 1 }}
+                  value={targetPath}
+                  placeholder="derivatives/voxtool_ct or N:collection:…"
+                  onChange={(e) => setTargetPath(e.target.value)}
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busy || !dataset}
+                  title={dataset ? "Pick a folder in this dataset" : "Choose a dataset first"}
+                  onClick={() => setBrowsing((b) => !b)}
+                >
+                  {browsing ? "Close" : "Browse…"}
+                </button>
+              </div>
+              {folderId && !dataset && (
+                <p className="muted">Choose a dataset to check this folder ID.</p>
+              )}
+              {folderHint?.path !== undefined && (
+                <p className="muted">
+                  Pennsieve folder: <strong>{folderHint.path || "(dataset root)"}</strong>
+                </p>
+              )}
+              {folderHint?.error && <p className="import-error">{folderHint.error}</p>}
             </div>
+
+            {browsing && (
+              <PennsieveBrowser
+                dataset={dataset}
+                datasetName={chosen?.name}
+                busy={busy}
+                onChooseFolder={({ path }) => {
+                  setTargetPath(path);
+                  setBrowsing(false);
+                }}
+              />
+            )}
 
             <div className="field">
               <label>Format</label>
