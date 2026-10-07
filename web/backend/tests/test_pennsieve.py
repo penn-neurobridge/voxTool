@@ -69,23 +69,37 @@ elif args[:2] == ["manifest", "create"]:
     else:
         mid = str(7 + len(state["manifests"]))
         target = args[args.index("--target_path") + 1] if "--target_path" in args else ""
-        state["manifests"][mid] = {{"dataset": state["active"], "target": target,
-                                    "path": args[-1], "status": "REGISTERED"}}
+        state["manifests"][mid] = {{"dataset": state["active"], "files": [
+            {{"path": args[-1], "target": target, "status": "REGISTERED"}}]}}
         save()
         print("Manifest ID: " + mid + " Message: Successfully indexed 1 files.")
+elif args[:2] == ["manifest", "add"]:
+    rest = [a for a in args[2:]]
+    target = ""
+    if "--target_path" in rest:
+        i = rest.index("--target_path")
+        target = rest[i + 1]
+        del rest[i:i + 2]
+    if scenario == "add_fail":
+        print("Successfully indexed 0 files.")
+    else:
+        state["manifests"][rest[0]]["files"].append(
+            {{"path": rest[1], "target": target, "status": "REGISTERED"}})
+        save()
+        print("Successfully indexed 1 files.")
 elif args[:2] == ["upload", "manifest"]:
-    m = state["manifests"][args[2]]
-    m["status"] = {{"stuck": "REGISTERED", "failed": "FAILED"}}.get(scenario, "UPLOADED")
+    for f in state["manifests"][args[2]]["files"]:
+        f["status"] = {{"stuck": "REGISTERED", "failed": "FAILED"}}.get(scenario, "UPLOADED")
     save()
     print("Upload initiated for manifest: " + args[2])
 elif args[:2] == ["manifest", "list"]:
-    m = state["manifests"][args[2]]
-    table([["Files for upload manifest: " + args[2]], ["ID", "SOURCE PATH", "STATUS"],
-           [1, m["path"], m["status"]]])
+    files = state["manifests"][args[2]]["files"]
+    table([["Files for upload manifest: " + args[2]], ["ID", "SOURCE PATH", "STATUS"]]
+          + [[i + 1, f["path"], f["status"]] for i, f in enumerate(files)])
 elif args[:2] == ["manifest", "sync"]:
-    m = state["manifests"][args[2]]
-    if m["status"] == "UPLOADED" and scenario != "slow_import":
-        m["status"] = "VERIFIED"
+    for f in state["manifests"][args[2]]["files"]:
+        if f["status"] == "UPLOADED" and scenario != "slow_import":
+            f["status"] = "VERIFIED"
     save()
     print("Synchronizing manifest.")
 '''
@@ -141,7 +155,26 @@ class TestUpload:
         assert result["state"] == "imported"
         (manifest,) = fake.manifests().values()
         assert manifest["dataset"] == SANDBOX
-        assert manifest["target"] == "derivatives/voxtool_ct"
+        assert [f["target"] for f in manifest["files"]] == ["derivatives/voxtool_ct"]
+
+    def test_several_files_go_up_together(self, fake):
+        txt = fake.file.with_suffix(".txt")
+        txt.write_text("LA1\t1\t2\t3\tD\t8 1\n")
+        result = pennsieve_sync.upload([str(fake.file), str(txt)], dataset_id=SANDBOX,
+                                       target_path="derivatives/voxtool_ct", dry_run=False)
+        assert result["state"] == "imported"
+        assert result["files"] == [fake.file.name, txt.name]
+        (manifest,) = fake.manifests().values()
+        assert [os.path.basename(f["path"]) for f in manifest["files"]] == result["files"]
+        assert {f["target"] for f in manifest["files"]} == {"derivatives/voxtool_ct"}
+
+    def test_failed_add_is_an_error(self, fake):
+        fake.scenario("add_fail")
+        txt = fake.file.with_suffix(".txt")
+        txt.write_text("x")
+        with pytest.raises(pennsieve_sync.PennsieveError, match="Could not add"):
+            pennsieve_sync.upload([str(fake.file), str(txt)], dataset_id=SANDBOX, dry_run=False)
+        assert not any(c[:2] == ["upload", "manifest"] for c in fake.calls())
 
     def test_ignored_dataset_switch_sends_nothing(self, fake):
         # The real CLI exits 0 here and leaves the old dataset active, so a
@@ -234,6 +267,27 @@ class TestRoute:
         assert body["state"] == "imported"
         assert body["filename"].startswith("sub-03_voxel_coordinates_")
         assert self.outbox_files() == []
+
+    def test_json_and_txt_share_a_stamp(self, client, fake):
+        r = client.post("/api/pennsieve/upload", json={
+            "document": self.DOC, "dataset_id": SANDBOX, "dry_run": False,
+            "formats": ["json", "txt"], "txt": "LA1\t1\t2\t3\tD\t8 1\n",
+            "scan_filename": "sub-03_ct.nii.gz"})
+        names = r.get_json()["files"]
+        assert [os.path.splitext(n)[1] for n in names] == [".json", ".txt"]
+        assert os.path.splitext(names[0])[0] == os.path.splitext(names[1])[0]
+        assert names[0].startswith("sub-03_voxel_coordinates_")
+
+    def test_txt_without_text_is_refused(self, client, fake):
+        r = client.post("/api/pennsieve/upload", json={
+            "document": self.DOC, "dataset_id": SANDBOX, "formats": ["txt"], "txt": ""})
+        assert r.status_code == 400
+        assert fake.calls() == []
+
+    def test_unknown_format_is_refused(self, client, fake):
+        r = client.post("/api/pennsieve/upload", json={
+            "document": self.DOC, "dataset_id": SANDBOX, "formats": ["csv"]})
+        assert r.status_code == 400
 
     def test_pending_upload_keeps_its_file(self, client, fake):
         # The agent reads the file after the request returns.

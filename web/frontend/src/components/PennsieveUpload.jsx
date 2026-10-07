@@ -14,10 +14,12 @@ const API = process.env.REACT_APP_API_URL || "";
  * happen and sends nothing. Nor is a dataset ever pre-selected, not even the
  * agent's active one, which may be a real dataset left over from last time.
  */
-export default function PennsieveUpload({ open, onClose, document, scanFilename, counts }) {
+export default function PennsieveUpload({ open, onClose, document, txt, scanFilename, counts }) {
   const [status, setStatus] = useState(null);
   const [dataset, setDataset] = useState("");
   const [targetPath, setTargetPath] = useState("");
+  // JSON is VoxTool's full record; TXT is the lab's electrodes.txt layout.
+  const [format, setFormat] = useState("both");
   const [reallySend, setReallySend] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -46,6 +48,8 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           document,
+          txt,
+          formats: format === "both" ? ["json", "txt"] : [format],
           scan_filename: scanFilename,
           dataset_id: dataset,
           target_path: targetPath,
@@ -61,7 +65,7 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
     } finally {
       setBusy(false);
     }
-  }, [document, scanFilename, dataset, targetPath, reallySend]);
+  }, [document, txt, format, scanFilename, dataset, targetPath, reallySend]);
 
   if (!open) return null;
 
@@ -130,11 +134,24 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
               />
             </div>
 
+            <div className="field">
+              <label>Format</label>
+              <select
+                value={format}
+                onChange={(e) => setFormat(e.target.value)}
+                disabled={busy}
+              >
+                <option value="both">JSON and TXT</option>
+                <option value="json">JSON only (VoxTool's full record)</option>
+                <option value="txt">TXT only (the lab's electrodes.txt layout)</option>
+              </select>
+            </div>
+
             <p className="pennsieve-summary">
               Sending <strong>{counts?.leads ?? 0}</strong> lead
               {counts?.leads === 1 ? "" : "s"} and{" "}
               <strong>{counts?.contacts ?? 0}</strong> contact
-              {counts?.contacts === 1 ? "" : "s"}. The filename is stamped with the
+              {counts?.contacts === 1 ? "" : "s"}. Filenames are stamped with the
               date and time, so an earlier upload is never overwritten.
             </p>
 
@@ -184,8 +201,12 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
             <table className="pennsieve-result">
               <tbody>
                 <tr>
-                  <th>File</th>
-                  <td>{result.filename}</td>
+                  <th>{result.files?.length > 1 ? "Files" : "File"}</th>
+                  <td>
+                    {(result.files || [result.filename]).map((name) => (
+                      <div key={name}>{name}</div>
+                    ))}
+                  </td>
                 </tr>
                 <tr>
                   <th>Dataset</th>

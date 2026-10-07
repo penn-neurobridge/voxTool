@@ -152,10 +152,13 @@ service source reuses an existing folder of the same name rather than making a
 second one.
 
 The first real upload (2026-10-06, a made-up test file into the VoxTool Test
-sandbox in Penn CNT) landed in `derivatives/voxtool_ct` as intended. The agent
-still listed the file as UPLOADED after a `manifest sync`, though it was already
-visible in the dataset, so in practice the dialog reports "sent" rather than "in
-the dataset". Confirming the import needs the REST API.
+sandbox in Penn CNT) landed in `derivatives/voxtool_ct` as intended. Its status
+was still UPLOADED when the dialog's 90 s wait ran out, though the file was
+already visible in the dataset, so the dialog said "sent". The sub-03 CT (77 MB,
+to `primary/sub-03/ses-postimplant/ct`) did reach VERIFIED, after a few minutes
+of repeated syncs. So the confirmation works but often arrives after the dialog
+stops waiting; checking the dataset through the REST API would settle it
+directly.
 
 **Limiting uploads to one dataset.** Set `VOXTOOL_PENNSIEVE_DATASETS` to a
 comma-separated list of `N:dataset:` ids and the dialog lists only those, and
@@ -187,9 +190,13 @@ replacing one, because losing an earlier annotation is worse than keeping two.
 
 ### Not done yet
 
-- Only the coordinates are uploaded, as JSON, not the CT or the implant
-  document. The lab's existing datasets keep an `electrodes.txt` in
-  `derivatives/voxtool_ct`; whether to write that format instead is open.
+- Only the coordinates are uploaded, not the CT or the implant document. The
+  dialog sends JSON (VoxTool's full record), TXT (the layout of the lab's
+  `electrodes.txt`), or both as one upload with a shared timestamp. The TXT
+  writes a depth lead's dimensions as `N 1`, as the lab's files do, though the
+  app stores it as `[1, N]`. Whether the TXT should be named exactly
+  `electrodes.txt` is still open; Pennsieve would then keep re-uploads as
+  `electrodes (1).txt` rather than replacing the file.
 - Pulling a scan *from* Pennsieve to annotate is not implemented, and neither is
   choosing a destination by its Pennsieve id. The CLI can do neither usefully:
   `download package` writes into the agent's working directory in the

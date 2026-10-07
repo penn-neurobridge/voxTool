@@ -233,13 +233,13 @@ def _first_error(out: str) -> str:
     return ""
 
 
-def remote_filename(scan_filename: str, when: float | None = None) -> str:
+def remote_filename(scan_filename: str, when: float | None = None, ext: str = "json") -> str:
     """`sub-03_ct.nii.gz` -> `sub-03_voxel_coordinates_20260929-1432.json`.
 
     Naming it after the scan keeps it identifiable whichever way the lab
     organises datasets, and the timestamp means re-annotating never overwrites
     an earlier result. Losing a previous annotation is far worse than having
-    two of them.
+    two of them. The JSON and TXT of one upload share a stamp, so they pair up.
     """
     base = os.path.basename(scan_filename or "scan")
     for suffix in (".nii.gz", ".nii", ".gz"):
@@ -248,24 +248,29 @@ def remote_filename(scan_filename: str, when: float | None = None) -> str:
             break
     base = re.sub(r"[_-]?ct$", "", base, flags=re.IGNORECASE) or "scan"
     stamp = time.strftime("%Y%m%d-%H%M", time.localtime(when or time.time()))
-    return f"{base}_voxel_coordinates_{stamp}.json"
+    return f"{base}_voxel_coordinates_{stamp}.{ext}"
 
 
 def upload(
-    local_path: str,
+    local_paths: str | list[str],
     dataset_id: str,
     target_path: str = "",
     dry_run: bool = True,
     wait: float | None = None,
 ) -> dict:
-    """Send one file to a dataset. With dry_run, reports the plan and stops.
+    """Send files to one folder of a dataset, as a single upload. With dry_run,
+    reports the plan and stops.
 
-    `state` in the result says how far the file got: "imported" (in the
+    `state` in the result says how far the files got: "imported" (all in the
     dataset), "sent" (transferred, Pennsieve still importing) or "pending"
     (still uploading when `wait` ran out; the agent carries on regardless).
     """
-    if not os.path.isfile(local_path):
-        raise PennsieveError(f"Nothing to upload at {local_path}.")
+    paths = [local_paths] if isinstance(local_paths, str) else list(local_paths)
+    if not paths:
+        raise PennsieveError("Nothing to upload.")
+    for path in paths:
+        if not os.path.isfile(path):
+            raise PennsieveError(f"Nothing to upload at {path}.")
     if not dataset_id:
         raise PennsieveError("No dataset chosen.")
     allowed = allowed_datasets()
@@ -277,8 +282,9 @@ def upload(
         )
 
     plan = {
-        "file": os.path.basename(local_path),
-        "bytes": os.path.getsize(local_path),
+        "file": os.path.basename(paths[0]),
+        "files": [os.path.basename(p) for p in paths],
+        "bytes": sum(os.path.getsize(p) for p in paths),
         "dataset": dataset_id,
         "target_path": target_path,
         "dry_run": bool(dry_run),
@@ -290,7 +296,7 @@ def upload(
         return plan
 
     _use_dataset(dataset_id)
-    manifest_id = _create_manifest(local_path, target_path)
+    manifest_id = _create_manifest(paths, target_path)
     try:
         # Starts the transfer, then waits for the agent to announce that an
         # upload finished — any upload, and possibly never. The manifest is
@@ -298,7 +304,7 @@ def upload(
         _run(["upload", "manifest", manifest_id], timeout=30)
     except PennsieveTimeout:
         pass
-    state = _wait_for_file(manifest_id, UPLOAD_WAIT if wait is None else wait)
+    state = _wait_for_files(manifest_id, len(paths), UPLOAD_WAIT if wait is None else wait)
 
     plan["uploaded"] = state != "pending"
     plan["state"] = state
@@ -323,45 +329,56 @@ def _use_dataset(dataset_id: str) -> None:
         )
 
 
-def _create_manifest(local_path: str, target_path: str) -> str:
-    args = ["manifest", "create"]
-    if target_path:
-        args += ["--target_path", target_path]
-    args.append(local_path)
-    _, out = _run(args, timeout=120)
+def _create_manifest(paths: list[str], target_path: str) -> str:
+    """One manifest for all the files, each indexed exactly once."""
+    target = ["--target_path", target_path] if target_path else []
+    # `manifest create` reads only its first path; the rest go in with `add`.
+    _, out = _run(["manifest", "create", *target, paths[0]], timeout=120)
     # A failed index still hands back a manifest id, with a different message.
     m = re.search(r"Manifest ID:\s*(\d+)\s+Message:\s*Successfully indexed (\d+) files", out)
     if not m or m.group(2) != "1":
         raise PennsieveError(f"Could not prepare the upload: {_message(out)}")
-    return m.group(1)
+    manifest_id = m.group(1)
+    for path in paths[1:]:
+        _, out = _run(["manifest", "add", *target, manifest_id, path], timeout=120)
+        # `add` reports "indexed 0 files" rather than an error when it fails.
+        if not re.search(r"Successfully indexed 1 files", out):
+            raise PennsieveError(
+                f"Could not add {os.path.basename(path)} to the upload: {_message(out)}"
+            )
+    return manifest_id
 
 
-def _file_status(manifest_id: str) -> str:
-    """Status of the one file in a manifest, or "" if it cannot be read."""
+def _file_statuses(manifest_id: str) -> list[str]:
+    """Status of each file in a manifest, as `manifest list` reports them."""
     _, out = _run(["manifest", "list", manifest_id])
-    for cells in _table_rows(out):
-        if len(cells) >= 3 and cells[0].isdigit():
-            return cells[-1].upper()
-    return ""
+    return [
+        cells[-1].upper()
+        for cells in _table_rows(out)
+        if len(cells) >= 3 and cells[0].isdigit()
+    ]
 
 
-def _wait_for_file(manifest_id: str, seconds: float) -> str:
-    """Follow a manifest until its file is in the dataset or time runs out."""
+def _wait_for_files(manifest_id: str, count: int, seconds: float) -> str:
+    """Follow a manifest until all its files are in the dataset or time runs out."""
     deadline = time.monotonic() + seconds
     last_sync = 0.0
     while True:
-        state = _file_status(manifest_id)
-        if state in _FAILED:
+        states = _file_statuses(manifest_id)
+        failed = [s for s in states if s in _FAILED]
+        if failed:
             raise PennsieveError(
-                f"Pennsieve reported the upload as {state.lower()}. Run "
+                f"Pennsieve reported the upload as {failed[0].lower()}. Run "
                 f"`pennsieve manifest list {manifest_id}` for details."
             )
-        if state in _IN_DATASET:
+        complete = len(states) == count
+        if complete and all(s in _IN_DATASET for s in states):
             return "imported"
+        all_sent = complete and all(s in _SENT for s in states)
         now = time.monotonic()
         if now >= deadline:
-            return "sent" if state in _SENT else "pending"
-        if state in _SENT and now - last_sync >= 10:
+            return "sent" if all_sent else "pending"
+        if all_sent and now - last_sync >= 10:
             # Only a sync asks the server whether the import has finished. It
             # also waits on an agent event, so a timeout here is normal.
             last_sync = now

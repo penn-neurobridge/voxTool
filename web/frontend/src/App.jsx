@@ -7,6 +7,7 @@ import ThresholdCloudViewer from "./components/ThresholdCloudViewer";
 import DocumentImport from "./components/DocumentImport";
 import PennsieveUpload from "./components/PennsieveUpload";
 import { nextColorIndex } from "./leadColors";
+import { buildExportTxt } from "./exportTxt";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -662,43 +663,13 @@ export default function App() {
   }, [scanFilename, leads, contacts, includeBipolarPairs]);
 
   /**
-   * Legacy voxel_coordinates.txt (tab-separated), matching model/scan.py
-   * to_vox_mom: name, x, y, z, type, "dx dy"
-   */
-  const buildExportTxt = useCallback(
-    async (doc) => {
-      const lines = [];
-      const leadEntries = Object.entries(doc.leads || {}).sort(([a], [b]) =>
-        a.toUpperCase().localeCompare(b.toUpperCase())
-      );
-      for (const [, lead] of leadEntries) {
-        const dims = lead.dimensions || [1, 8];
-        const type = lead.type || "D";
-        const sorted = [...(lead.contacts || [])].sort((a, b) => {
-          const na = parseInt(String(a.name).replace(/\D+/g, ""), 10) || 0;
-          const nb = parseInt(String(b.name).replace(/\D+/g, ""), 10) || 0;
-          return na - nb;
-        });
-        for (const c of sorted) {
-          const v = c.coordinate_spaces?.ct_voxel?.raw || [0, 0, 0];
-          lines.push(
-            `${c.name}\t${v[0]}\t${v[1]}\t${v[2]}\t${type}\t${dims[0]} ${dims[1]}\n`
-          );
-        }
-      }
-      return lines.join("");
-    },
-    []
-  );
-
-  /**
    * Write annotations. When the File System Access API is available the native
    * save dialog lists both JSON and TXT; otherwise we ask once and download.
    */
   const writeAnnotationFile = useCallback(
     async (doc) => {
       const jsonText = JSON.stringify(doc, null, 2);
-      const txtText = await buildExportTxt(doc);
+      const txtText = buildExportTxt(doc);
 
       const payloadFor = (format) =>
         format === "txt"
@@ -770,7 +741,7 @@ export default function App() {
         v === "txt" || v === ".txt" || v === "text" || v === "t" ? "txt" : "json";
       return download(payloadFor(format));
     },
-    [buildExportTxt]
+    []
   );
 
   /** Save as… — JSON or legacy TXT. */
@@ -800,7 +771,7 @@ export default function App() {
   }, [scanFilename, leads, contacts, buildExportDocument, writeAnnotationFile]);
 
 
-  /** Build the export document, then hand it to the Pennsieve dialog. */
+  /** Build the export in both formats, then hand it to the Pennsieve dialog. */
   const openPennsieve = useCallback(async () => {
     if (!scanFilename) return;
     if (!leads.length && !contacts.length) {
@@ -808,7 +779,7 @@ export default function App() {
       return;
     }
     const doc = await buildExportDocument();
-    if (doc) setPennsieveDoc(doc);
+    if (doc) setPennsieveDoc({ doc, txt: buildExportTxt(doc) });
   }, [scanFilename, leads.length, contacts.length, buildExportDocument]);
 
   /** Apply a loaded annotation document (legacy or web formats). */
@@ -1503,7 +1474,8 @@ export default function App() {
       <PennsieveUpload
         open={!!pennsieveDoc}
         onClose={() => setPennsieveDoc(null)}
-        document={pennsieveDoc}
+        document={pennsieveDoc?.doc}
+        txt={pennsieveDoc?.txt}
         scanFilename={scanFilename}
         counts={{ leads: leads.length, contacts: contacts.length }}
       />

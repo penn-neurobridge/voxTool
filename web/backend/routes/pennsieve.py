@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 
 from flask import Blueprint, jsonify, request
 
@@ -68,32 +69,49 @@ def upload():
     scan_filename = (body.get("scan_filename") or "").strip()
     # Opt in, never default on.
     dry_run = body.get("dry_run", True) is not False
+    # "json" is VoxTool's full document; "txt" is the legacy tab-separated
+    # layout of the lab's electrodes.txt, built by the frontend's exporter.
+    formats = body.get("formats") or ["json"]
+    txt = body.get("txt")
 
     if not isinstance(document, dict) or not document.get("leads"):
         return jsonify({"success": False, "error": "Nothing to upload — no annotations."}), 400
     if not dataset_id:
         return jsonify({"success": False, "error": "Choose a dataset first."}), 400
+    if not isinstance(formats, list) or not set(formats) <= {"json", "txt"}:
+        return jsonify({"success": False, "error": "Formats must be json and/or txt."}), 400
+    if "txt" in formats and not (isinstance(txt, str) and txt.strip()):
+        return jsonify({"success": False, "error": "No TXT to upload — no marked contacts."}), 400
 
-    name = pennsieve_sync.remote_filename(scan_filename)
+    when = time.time()
+    contents = {}
+    if "json" in formats:
+        contents[pennsieve_sync.remote_filename(scan_filename, when)] = json.dumps(document, indent=2)
+    if "txt" in formats:
+        contents[pennsieve_sync.remote_filename(scan_filename, when, ext="txt")] = txt
+
     staging_dir = tempfile.mkdtemp(dir=pennsieve_sync.outbox_dir())
-    # Written under its final name: the agent uses the filename on disk as the
-    # name in the dataset.
-    local_path = os.path.join(staging_dir, name)
     keep = False
     try:
-        with open(local_path, "w") as f:
-            json.dump(document, f, indent=2)
+        paths = []
+        for name, text in contents.items():
+            # Written under its final name: the agent uses the filename on disk
+            # as the name in the dataset.
+            path = os.path.join(staging_dir, name)
+            with open(path, "w") as f:
+                f.write(text)
+            paths.append(path)
 
         result = pennsieve_sync.upload(
-            local_path,
+            paths,
             dataset_id=dataset_id,
             target_path=target_path,
             dry_run=dry_run,
         )
-        # The agent is still reading it; deleting it now would drop the upload.
+        # The agent is still reading them; deleting now would drop the upload.
         keep = result.get("state") == "pending"
         result["success"] = True
-        result["filename"] = name
+        result["filename"] = result["file"]
         return jsonify(result)
     except pennsieve_sync.PennsieveError as e:
         return jsonify({"success": False, "error": str(e)}), 502
