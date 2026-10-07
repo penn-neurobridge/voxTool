@@ -6,6 +6,7 @@ import NiiVueViewer from "./components/NiiVueViewer";
 import ThresholdCloudViewer from "./components/ThresholdCloudViewer";
 import DocumentImport from "./components/DocumentImport";
 import PennsieveUpload from "./components/PennsieveUpload";
+import PennsieveOpen from "./components/PennsieveOpen";
 import { nextColorIndex } from "./leadColors";
 import { buildExportTxt } from "./exportTxt";
 
@@ -134,6 +135,7 @@ export default function App() {
   const [selectedContact, setSelectedContact] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [pennsieveDoc, setPennsieveDoc] = useState(null);
+  const [showPennsieveOpen, setShowPennsieveOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -1471,6 +1473,15 @@ export default function App() {
         </div>
       </div>
 
+      <PennsieveOpen
+        open={showPennsieveOpen}
+        onClose={() => setShowPennsieveOpen(false)}
+        onOpened={(path) => {
+          setShowPennsieveOpen(false);
+          openScanAtPath(path);
+        }}
+      />
+
       <PennsieveUpload
         open={!!pennsieveDoc}
         onClose={() => setPennsieveDoc(null)}
@@ -1563,6 +1574,19 @@ export default function App() {
                     }}
                   />
                 </label>
+              )}
+              {localFiles && (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={uploadingScan}
+                  onClick={() => {
+                    setShowPicker(false);
+                    setShowPennsieveOpen(true);
+                  }}
+                >
+                  From Pennsieve…
+                </button>
               )}
             </div>
             {pickerError && (

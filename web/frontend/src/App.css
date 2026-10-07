@@ -1284,3 +1284,74 @@ input:focus {
   padding: 4px 0;
   word-break: break-all;
 }
+
+.pennsieve-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin: 4px 0 8px;
+  color: var(--text-secondary);
+}
+
+.pennsieve-crumbs button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.pennsieve-crumbs button:disabled {
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.pennsieve-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.pennsieve-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pennsieve-row:last-child {
+  border-bottom: none;
+}
+
+.pennsieve-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pennsieve-row-folder {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.pennsieve-row-folder:hover {
+  background: var(--accent-dim);
+}
+
+.pennsieve-row-other {
+  color: var(--text-secondary);
+}
+
+.pennsieve-row-size {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}

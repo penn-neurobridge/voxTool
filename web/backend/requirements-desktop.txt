@@ -9,3 +9,9 @@ waitress>=3.0
 # Implant-document extraction (local only; see extraction/).
 pymupdf>=1.24
 python-pptx>=1.0
+
+# Pennsieve browsing and downloads (local only; see pennsieve_api.py). Only
+# asks the Pennsieve agent for a session token; pennsieve_agent/agent_pb2.py
+# was generated for the protobuf 5.x runtime.
+grpcio>=1.71
+protobuf>=5.29,<6

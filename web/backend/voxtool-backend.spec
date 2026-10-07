@@ -32,6 +32,12 @@ hiddenimports = [
     "scan_store",
     "routes.scans",
     "routes.annotations",
+    "routes.pennsieve",
+    "pennsieve_sync",
+    "pennsieve_api",
+    # Imported only when a Pennsieve session is first needed.
+    "pennsieve_agent.agent_pb2",
+    "grpc",
 ]
 
 # nibabel resolves several format handlers lazily, so static analysis misses them.

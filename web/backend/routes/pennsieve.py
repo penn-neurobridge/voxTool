@@ -1,8 +1,8 @@
-"""Upload finished annotations to Pennsieve.
+"""Upload finished annotations to Pennsieve, and open scans from it.
 
 Local-only, for the same reason as document extraction: the cloud deployment
-has no authentication, and this endpoint would let anyone who found it push
-files into the lab's Pennsieve workspace using this machine's credentials.
+has no authentication, and these endpoints would let anyone who found them
+read or write the lab's Pennsieve workspace using this machine's credentials.
 
 Sending defaults to off. A caller has to ask for a real upload explicitly, so
 a bug or a mis-wired button reports a plan instead of putting a patient file
@@ -19,6 +19,7 @@ import time
 from flask import Blueprint, jsonify, request
 
 import local_mode
+import pennsieve_api
 import pennsieve_sync
 
 pennsieve_bp = Blueprint("pennsieve", __name__)
@@ -41,6 +42,20 @@ def _refuse_if_cloud():
     return None
 
 
+def _unexpected(e: Exception):
+    """Report an unforeseen failure by type only.
+
+    These handlers read Pennsieve's config and talk to the agent, so an
+    exception's message can carry a credential: one already quoted an API
+    secret from config.ini. Letting it propagate would print it in the server
+    log, and echoing it would show it in the UI.
+    """
+    return jsonify({
+        "success": False,
+        "error": f"Unexpected {type(e).__name__} while talking to Pennsieve.",
+    }), 500
+
+
 @pennsieve_bp.route("/status", methods=["GET"])
 def status():
     refusal = _refuse_if_cloud()
@@ -54,6 +69,53 @@ def status():
     payload = st.to_json()
     payload["success"] = True
     return jsonify(payload)
+
+
+@pennsieve_bp.route("/browse", methods=["GET"])
+def browse():
+    """One folder of a dataset. Query: dataset=<N:dataset:…>, folder=<N:collection:…>."""
+    refusal = _refuse_if_cloud()
+    if refusal:
+        return refusal
+    dataset_id = (request.args.get("dataset") or "").strip()
+    folder_id = (request.args.get("folder") or "").strip()
+    if not dataset_id:
+        return jsonify({"success": False, "error": "Choose a dataset first."}), 400
+    try:
+        listing = pennsieve_api.browse(dataset_id, folder_id)
+    except pennsieve_sync.PennsieveError as e:
+        return jsonify({"success": False, "error": str(e)}), 502
+    except Exception as e:  # noqa: BLE001
+        return _unexpected(e)
+    listing["success"] = True
+    return jsonify(listing)
+
+
+@pennsieve_bp.route("/open", methods=["POST"])
+def open_scan():
+    """Download a scan by its Pennsieve ID. Body: {package_id: <N:package:…>}.
+
+    Returns the local path; the UI opens it through /api/scans/open_local, the
+    same as a scan picked from disk.
+    """
+    refusal = _refuse_if_cloud()
+    if refusal:
+        return refusal
+    body = request.get_json(silent=True) or {}
+    package_id = (body.get("package_id") or "").strip()
+    if not package_id.startswith("N:package:"):
+        return jsonify({
+            "success": False,
+            "error": "Paste a Pennsieve file ID; it starts with N:package:",
+        }), 400
+    try:
+        result = pennsieve_api.download_scan(package_id)
+    except pennsieve_sync.PennsieveError as e:
+        return jsonify({"success": False, "error": str(e)}), 502
+    except Exception as e:  # noqa: BLE001
+        return _unexpected(e)
+    result["success"] = True
+    return jsonify(result)
 
 
 @pennsieve_bp.route("/upload", methods=["POST"])

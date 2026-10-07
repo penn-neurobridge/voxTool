@@ -188,6 +188,39 @@ Filenames are derived from the scan and stamped with the time —
 is deliberately no overwrite: re-annotating a subject adds a file rather than
 replacing one, because losing an earlier annotation is worse than keeping two.
 
+## Opening a scan from Pennsieve
+
+**Load a CT Scan → From Pennsieve…** browses a dataset's folders, or takes a
+file's Pennsieve ID (`N:package:…`) pasted in. The scan is downloaded into the
+app data folder's `pennsieve-downloads`, one folder per package, and then
+opened exactly like a scan picked from disk. A file already there at the right
+size is reused, so reopening is instant. Like the rest of the app data, these
+are copies of patient scans on this machine.
+
+The CLI cannot do this: it has no command to list folders, and
+`download package` writes into the agent's working directory in the background
+without saying where. So `pennsieve_api.py` uses the REST API, with a session
+token from the running agent's gRPC `ReAuthenticate` call — the route
+Pennsieve's own Python client takes. VoxTool still never reads the API key; the
+token lives in memory, expires within the hour, and belongs to whichever
+profile the agent is signed in to, the same one uploads use.
+`VOXTOOL_PENNSIEVE_DATASETS` limits browsing and downloads as it limits uploads.
+
+Pennsieve's own Python package was not used: it brings pandas, boto3, numpy and
+more, 261 MB against a ~110 MB installer. Only `grpcio` and `protobuf` are
+added, and `pennsieve_agent/agent_pb2.py` is generated from the agent's
+published proto (see that package for how to regenerate it).
+
+**Never let an error repeat what was read from `~/.pennsieve/config.ini`.** The
+CLI writes the default profile's key and secret above the first section header.
+`configparser` rejects that and quotes the line in its error, which once printed
+an API secret into the server log. The config is now scanned for the agent's
+port alone, and these endpoints report unexpected errors by type only.
+
+Verified on 2026-10-06: the sub-03 CT, opened from VoxTool Test by its ID,
+arrived byte-for-byte identical to the original and opened normally; browsing
+PennEPI00049 was refused by the dataset lock.
+
 ### Not done yet
 
 - Only the coordinates are uploaded, not the CT or the implant document. The
@@ -197,11 +230,11 @@ replacing one, because losing an earlier annotation is worse than keeping two.
   app stores it as `[1, N]`. Whether the TXT should be named exactly
   `electrodes.txt` is still open; Pennsieve would then keep re-uploads as
   `electrodes (1).txt` rather than replacing the file.
-- Pulling a scan *from* Pennsieve to annotate is not implemented, and neither is
-  choosing a destination by its Pennsieve id. The CLI can do neither usefully:
-  `download package` writes into the agent's working directory in the
-  background and never reports where, and `--target_path` takes only a path.
-  Both need the REST API, authenticated with the session token the agent hands
-  out over gRPC, which is how Pennsieve's own Python client works.
+- Choosing an upload destination by its Pennsieve ID, or from the folder
+  browser, is not done; the upload still takes a typed path, since
+  `--target_path` takes nothing else. The browser's REST calls give the path
+  for any folder ID, which is what that needs.
+- The desktop installer has not been rebuilt with `grpcio` and `protobuf`; the
+  PyInstaller spec names the new modules, but a packaged build is untested.
 - API keys are per-workspace in Pennsieve, so working in a different workspace
   needs a new key and a second profile (`pennsieve profile create`).
