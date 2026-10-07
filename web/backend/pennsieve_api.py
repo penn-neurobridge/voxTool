@@ -10,7 +10,7 @@ the API key, and the token always belongs to the profile the agent is signed in
 to, the same one uploads go through. It lives in memory only and expires within
 the hour.
 
-Reads honour VOXTOOL_PENNSIEVE_DATASETS just as uploads do: while the list is
+Reads honour the per-computer dataset limit just as uploads do: while it is
 set, nothing outside it can be browsed or downloaded either.
 """
 from __future__ import annotations
@@ -36,6 +36,7 @@ class Session:
     expires: float
     organization_id: str
     api_host: str
+    profile: str = ""
 
 
 _session: Session | None = None
@@ -106,6 +107,7 @@ def _new_session() -> Session:
         expires=float(user.token_expire),
         organization_id=user.organization_id,
         api_host=(user.api_host or "https://api.pennsieve.io").rstrip("/"),
+        profile=user.profile,
     )
 
 
@@ -145,9 +147,45 @@ def _check_allowed(dataset_id: str) -> None:
     allowed = allowed_datasets()
     if allowed and dataset_id not in allowed:
         raise PennsieveError(
-            "That is outside the datasets this machine is set up for "
-            f"({', '.join(sorted(allowed))}, VOXTOOL_PENNSIEVE_DATASETS)."
+            "That is outside the datasets this computer is set to use "
+            "(Pennsieve settings in VoxTool)."
         )
+
+
+# Roles that may add files to a dataset; a viewer can only read.
+EDIT_ROLES = {"editor", "manager", "owner"}
+
+
+def datasets(limited: bool = True) -> list[dict]:
+    """Every dataset the account can see, with its role; only those within this
+    computer's limit unless `limited` is False (for choosing that limit)."""
+    allowed = allowed_datasets() if limited else set()
+    found, offset = [], 0
+    while True:
+        page = _get("/datasets/paginated", {
+            "limit": "100", "offset": str(offset), "includeBannerUrl": "false",
+        })
+        rows = page.get("datasets", [])
+        for row in rows:
+            content = row.get("content", {})
+            if allowed and content.get("id") not in allowed:
+                continue
+            role = row.get("role", "")
+            found.append({
+                "id": content.get("id", ""),
+                "name": content.get("name", ""),
+                "role": role,
+                "can_upload": role in EDIT_ROLES,
+            })
+        offset += len(rows)
+        if not rows or offset >= page.get("totalCount", 0):
+            break
+    return sorted(found, key=lambda d: d["name"].lower())
+
+
+def dataset_role(dataset_id: str) -> str:
+    """This account's role on one dataset: owner, manager, editor or viewer."""
+    return _get(f"/datasets/{_quote(dataset_id)}").get("role", "")
 
 
 def _item(child: dict) -> dict:

@@ -35,6 +35,7 @@ hiddenimports = [
     "routes.pennsieve",
     "pennsieve_sync",
     "pennsieve_api",
+    "pennsieve_connect",
     # Imported only when a Pennsieve session is first needed.
     "pennsieve_agent.agent_pb2",
     "grpc",

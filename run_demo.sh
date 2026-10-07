@@ -12,9 +12,6 @@ BACKEND="$ROOT/web/backend"
 FRONTEND="$ROOT/web/frontend"
 PORT="${PORT:-5001}"
 PY="${PYTHON:-/opt/homebrew/bin/python3.11}"
-# Pennsieve uploads may only reach the "VoxTool Test" sandbox in Penn CNT until
-# the lab signs off on real datasets. Set it empty to lift the restriction.
-VOXTOOL_PENNSIEVE_DATASETS="${VOXTOOL_PENNSIEVE_DATASETS-N:dataset:b3931fd3-f49c-4ded-a7d0-3a35f5f03f2a}"
 
 say() { printf "\n\033[1m%s\033[0m\n" "$1"; }
 
@@ -61,7 +58,6 @@ say "VoxTool is at http://127.0.0.1:$PORT   (Ctrl-C to stop)"
 cd "$BACKEND"
 exec env \
   VOXTOOL_LOCAL=1 \
-  VOXTOOL_PENNSIEVE_DATASETS="$VOXTOOL_PENNSIEVE_DATASETS" \
   VOXTOOL_STATIC_DIR="$FRONTEND/build" \
   PORT="$PORT" \
   FLASK_DEBUG=0 \

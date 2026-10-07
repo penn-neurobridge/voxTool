@@ -20,6 +20,7 @@ from flask import Blueprint, jsonify, request
 
 import local_mode
 import pennsieve_api
+import pennsieve_connect
 import pennsieve_sync
 
 pennsieve_bp = Blueprint("pennsieve", __name__)
@@ -67,8 +68,91 @@ def status():
     except pennsieve_sync.PennsieveError as e:
         return jsonify({"success": False, "error": str(e)}), 200
     payload = st.to_json()
+    payload["profiles"] = pennsieve_connect.profiles()
+    payload["profile"] = ""
+    if st.agent_running:
+        # The REST list says which datasets this account may add files to;
+        # the CLI's does not. Keep the CLI's if the API cannot be reached.
+        try:
+            payload["datasets"] = pennsieve_api.datasets(
+                limited=request.args.get("all") != "1"
+            )
+            payload["profile"] = pennsieve_api.session().profile
+        except Exception:  # noqa: BLE001
+            pass
     payload["success"] = True
     return jsonify(payload)
+
+
+@pennsieve_bp.route("/connect", methods=["POST"])
+def connect():
+    """Save an API key as a profile and switch to it. Body: {api_key, api_secret, force}.
+
+    The key and secret never appear in a response, an error, or a log: only
+    PennsieveError messages (written without them) and exception type names
+    come back.
+    """
+    refusal = _refuse_if_cloud()
+    if refusal:
+        return refusal
+    body = request.get_json(silent=True) or {}
+    api_key = body.get("api_key")
+    api_secret = body.get("api_secret")
+    if not (isinstance(api_key, str) and isinstance(api_secret, str)):
+        return jsonify({"success": False, "error": "Paste both the API key and the secret."}), 400
+    try:
+        result = pennsieve_connect.connect(api_key, api_secret, force=body.get("force") is True)
+    except pennsieve_connect.PennsieveBusy as e:
+        return jsonify({"success": False, "busy": True, "error": str(e)}), 409
+    except pennsieve_sync.PennsieveError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return _unexpected(e)
+    result["success"] = True
+    return jsonify(result)
+
+
+@pennsieve_bp.route("/switch", methods=["POST"])
+def switch_profile():
+    """Switch to a saved profile. Body: {profile, force}."""
+    refusal = _refuse_if_cloud()
+    if refusal:
+        return refusal
+    body = request.get_json(silent=True) or {}
+    profile = (body.get("profile") or "").strip()
+    try:
+        result = pennsieve_connect.switch(profile, force=body.get("force") is True)
+    except pennsieve_connect.PennsieveBusy as e:
+        return jsonify({"success": False, "busy": True, "error": str(e)}), 409
+    except pennsieve_sync.PennsieveError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return _unexpected(e)
+    result["success"] = True
+    return jsonify(result)
+
+
+@pennsieve_bp.route("/settings", methods=["GET", "POST"])
+def settings():
+    """This computer's dataset limit. Body: {allowed_datasets: [N:dataset:…]}, [] for none."""
+    refusal = _refuse_if_cloud()
+    if refusal:
+        return refusal
+    if request.method == "POST":
+        ids = (request.get_json(silent=True) or {}).get("allowed_datasets")
+        if not isinstance(ids, list) or not all(
+            isinstance(i, str) and i.startswith("N:dataset:") for i in ids
+        ):
+            return jsonify({"success": False, "error": "Expected a list of dataset IDs."}), 400
+        current = pennsieve_sync.load_settings()
+        current["allowed_datasets"] = sorted(set(ids))
+        pennsieve_sync.save_settings(current)
+    return jsonify({
+        "success": True,
+        "allowed_datasets": sorted(pennsieve_sync.allowed_datasets()),
+        # An environment variable overrides the saved setting, e.g. in tests.
+        "overridden": bool(os.environ.get("VOXTOOL_PENNSIEVE_DATASETS", "").strip()),
+    })
 
 
 @pennsieve_bp.route("/browse", methods=["GET"])
@@ -144,6 +228,21 @@ def upload():
         return jsonify({"success": False, "error": "Formats must be json and/or txt."}), 400
     if "txt" in formats and not (isinstance(txt, str) and txt.strip()):
         return jsonify({"success": False, "error": "No TXT to upload — no marked contacts."}), 400
+
+    # Checked before anything is written, preview included: a viewer's upload
+    # would only fail later, inside the agent, after the transfer.
+    try:
+        role = pennsieve_api.dataset_role(dataset_id)
+    except pennsieve_sync.PennsieveError as e:
+        return jsonify({"success": False, "error": str(e)}), 502
+    except Exception as e:  # noqa: BLE001
+        return _unexpected(e)
+    if role not in pennsieve_api.EDIT_ROLES:
+        return jsonify({
+            "success": False,
+            "error": f"This account is a {role or 'non-member'} of that dataset; uploading "
+                     "needs editor access or above. Ask the dataset's owner.",
+        }), 403
 
     # A folder given by ID is resolved here, against the chosen dataset, rather
     # than trusting a path the client worked out.

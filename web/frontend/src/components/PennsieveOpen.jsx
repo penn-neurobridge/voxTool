@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import PennsieveBrowser from "./PennsieveBrowser";
+import PennsieveConnect from "./PennsieveConnect";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -14,11 +15,10 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
   const [packageId, setPackageId] = useState("");
   const [downloading, setDownloading] = useState(null);
   const [error, setError] = useState("");
+  const [managing, setManaging] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    setError("");
-    setDownloading(null);
+  const loadStatus = useCallback(() => {
+    setStatus(null);
     fetch(`${API}/api/pennsieve/status?auto_start=1`)
       .then((r) => r.json())
       .then((d) => {
@@ -28,7 +28,14 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
         setDataset(d.datasets?.length === 1 ? d.datasets[0].id : "");
       })
       .catch((e) => setError(`Could not reach Pennsieve: ${e.message || e}`));
-  }, [open]);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setError("");
+    setDownloading(null);
+    loadStatus();
+  }, [open, loadStatus]);
 
   const openPackage = useCallback(
     async (id, label) => {
@@ -67,9 +74,16 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
         {!status && !error && <p className="muted">Checking your Pennsieve account…</p>}
 
         {blocked && (
-          <p className="import-warning">
-            {status.error || "Pennsieve is not ready on this machine."}
-          </p>
+          <>
+            <p className="import-warning">
+              {status.error || "Pennsieve is not ready on this computer."}
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setManaging(true)}>
+                Connect to Pennsieve…
+              </button>
+            </div>
+          </>
         )}
 
         {status && !blocked && (
@@ -79,7 +93,15 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
                 <span className="muted">Signed in as</span> <strong>{status.user}</strong>
               </div>
               <div>
-                <span className="muted">Workspace</span> <strong>{status.workspace}</strong>
+                <span className="muted">Workspace</span> <strong>{status.workspace}</strong>{" "}
+                <button
+                  type="button"
+                  className="link-button"
+                  disabled={busy}
+                  onClick={() => setManaging(true)}
+                >
+                  Change…
+                </button>
               </div>
             </div>
 
@@ -141,6 +163,14 @@ export default function PennsieveOpen({ open, onClose, onOpened }) {
           </button>
         </div>
       </div>
+
+      <PennsieveConnect
+        open={managing}
+        onClose={(changed) => {
+          setManaging(false);
+          if (changed) loadStatus();
+        }}
+      />
     </div>
   );
 }

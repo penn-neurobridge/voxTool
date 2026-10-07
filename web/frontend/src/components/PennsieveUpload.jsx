@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import PennsieveBrowser from "./PennsieveBrowser";
+import PennsieveConnect from "./PennsieveConnect";
 
 const API = process.env.REACT_APP_API_URL || "";
 const FOLDER_ID = /^N:collection:\S+$/;
@@ -29,23 +30,29 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [managing, setManaging] = useState(false);
 
   const folderId = FOLDER_ID.test(targetPath.trim()) ? targetPath.trim() : "";
+
+  const loadStatus = useCallback(() => {
+    setStatus(null);
+    setDataset("");
+    fetch(`${API}/api/pennsieve/status?auto_start=1`)
+      .then((r) => r.json())
+      .then(setStatus)
+      .catch((e) => setError(`Could not reach Pennsieve: ${e.message || e}`));
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     setError("");
     setResult(null);
     setReallySend(false);
-    setDataset("");
     setBrowsing(false);
     // The lab keeps VoxTool output here, beside the other derivatives.
     setTargetPath("derivatives/voxtool_ct");
-    fetch(`${API}/api/pennsieve/status?auto_start=1`)
-      .then((r) => r.json())
-      .then(setStatus)
-      .catch((e) => setError(`Could not reach Pennsieve: ${e.message || e}`));
-  }, [open]);
+    loadStatus();
+  }, [open, loadStatus]);
 
   // Say which folder a pasted ID is before anything is sent. The server looks
   // it up again at upload time, so this is only for the person choosing.
@@ -103,6 +110,10 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
 
   const blocked = status && (!status.installed || !status.agent_running);
   const chosen = status?.datasets?.find((d) => d.id === dataset);
+  // A viewer's upload would be refused, so only datasets this account can
+  // edit are offered (can_upload is missing if the API could not be asked).
+  const uploadable = (status?.datasets || []).filter((d) => d.can_upload !== false);
+  const viewOnly = (status?.datasets?.length || 0) - uploadable.length;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -114,13 +125,16 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
         {!status && !error && <p className="muted">Checking your Pennsieve account…</p>}
 
         {blocked && (
-          <p className="import-warning">
-            {status.error ||
-              "Pennsieve is not ready on this machine."}{" "}
-            {status.installed
-              ? "Start it with `pennsieve agent` in a terminal, then reopen this window."
-              : "Install the Pennsieve agent and sign in, then reopen this window."}
-          </p>
+          <>
+            <p className="import-warning">
+              {status.error || "Pennsieve is not ready on this computer."}
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setManaging(true)}>
+                Connect to Pennsieve…
+              </button>
+            </div>
+          </>
         )}
 
         {status && !blocked && !result && (
@@ -130,7 +144,15 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
                 <span className="muted">Signed in as</span> <strong>{status.user}</strong>
               </div>
               <div>
-                <span className="muted">Workspace</span> <strong>{status.workspace}</strong>
+                <span className="muted">Workspace</span> <strong>{status.workspace}</strong>{" "}
+                <button
+                  type="button"
+                  className="link-button"
+                  disabled={busy}
+                  onClick={() => setManaging(true)}
+                >
+                  Change…
+                </button>
               </div>
             </div>
 
@@ -145,7 +167,7 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
                 disabled={busy}
               >
                 <option value="">— choose a dataset —</option>
-                {(status.datasets || []).map((d) => (
+                {uploadable.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
                   </option>
@@ -153,7 +175,13 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
               </select>
               {status.restricted && (
                 <p className="muted">
-                  This machine only uploads to the datasets listed here.
+                  This computer only uses the datasets listed here (Change… to edit).
+                </p>
+              )}
+              {viewOnly > 0 && (
+                <p className="muted">
+                  {viewOnly} dataset{viewOnly === 1 ? "" : "s"} you can only view{" "}
+                  {viewOnly === 1 ? "is" : "are"} not listed.
                 </p>
               )}
             </div>
@@ -303,6 +331,14 @@ export default function PennsieveUpload({ open, onClose, document, txt, scanFile
           </>
         )}
       </div>
+
+      <PennsieveConnect
+        open={managing}
+        onClose={(changed) => {
+          setManaging(false);
+          if (changed) loadStatus();
+        }}
+      />
     </div>
   );
 }

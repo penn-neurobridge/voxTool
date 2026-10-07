@@ -219,7 +219,7 @@ class TestAllowList:
     def test_blocks_other_datasets_before_touching_the_cli(self, fake):
         fake.monkeypatch.setenv("VOXTOOL_PENNSIEVE_DATASETS", SANDBOX)
         for dry_run in (True, False):
-            with pytest.raises(pennsieve_sync.PennsieveError, match="only to"):
+            with pytest.raises(pennsieve_sync.PennsieveError, match="not one of them"):
                 pennsieve_sync.upload(str(fake.file), dataset_id=REAL, dry_run=dry_run)
         assert fake.calls() == []
 
@@ -242,12 +242,26 @@ class TestAllowList:
 class TestRoute:
     @pytest.fixture
     def client(self, fake):
+        import pennsieve_api
+
         fake.monkeypatch.setenv("VOXTOOL_LOCAL", "1")
+        # The role check asks the REST API; never let a test reach the real one.
+        fake.role = "owner"
+        fake.monkeypatch.setattr(pennsieve_api, "dataset_role", lambda dataset_id: fake.role)
         from app import create_app
 
         return create_app().test_client()
 
     DOC = {"leads": {"LA": {"contacts": []}}}
+
+    def test_viewer_cannot_upload_or_preview(self, client, fake):
+        fake.role = "viewer"
+        for dry_run in (True, False):
+            r = client.post("/api/pennsieve/upload", json={
+                "document": self.DOC, "dataset_id": SANDBOX, "dry_run": dry_run})
+            assert r.status_code == 403
+            assert "viewer" in r.get_json()["error"]
+        assert fake.calls() == []
 
     def outbox_files(self):
         return [f for _, _, files in os.walk(pennsieve_sync.outbox_dir()) for f in files]

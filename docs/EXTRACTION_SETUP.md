@@ -160,10 +160,18 @@ of repeated syncs. So the confirmation works but often arrives after the dialog
 stops waiting; checking the dataset through the REST API would settle it
 directly.
 
-**Limiting uploads to one dataset.** Set `VOXTOOL_PENNSIEVE_DATASETS` to a
-comma-separated list of `N:dataset:` ids and the dialog lists only those, and
-the server refuses any other before running the CLI at all. Use it while
-testing so that only the sandbox dataset can be reached.
+**Only datasets you can edit are offered.** The dataset list comes from the
+REST API with the account's role on each; a viewer's upload would only fail
+later, inside the agent, so viewer datasets are left out, and the server
+refuses an upload, or a preview, to one anyway.
+
+**Limiting a computer to certain datasets.** In **Pennsieve connection** (the
+**Change…** link in either dialog), tick datasets under *Datasets this computer
+may use*. Uploads, browsing and downloads are then limited to those, and the
+server refuses any other before running the CLI at all. The setting lives in
+the app data folder's `pennsieve-settings.json`, so it is per computer; the
+`VOXTOOL_PENNSIEVE_DATASETS` environment variable (comma-separated ids)
+overrides it, which the tests use. While testing, limit to the sandbox.
 
 **The CLI's word is never taken for anything.** Every `pennsieve` command exits 0
 whether or not it worked. In particular, `dataset use` with a dataset the
@@ -195,6 +203,45 @@ the server looks it up again at upload time, against the chosen dataset, rather
 than trusting a path the client worked out. The upload itself still goes by
 path, because the CLI's `--target_path` takes nothing else; Pennsieve matches
 each part to the existing folder of that name.
+
+## Connecting without the terminal
+
+**Pennsieve connection** replaces `pennsieve profile create` and
+`pennsieve profile switch`. Paste an API key and secret (made under Pennsieve's
+*Account Settings → API Keys*, for one workspace) and VoxTool:
+
+1. signs in with them the way Pennsieve's clients do — Cognito
+   `USER_PASSWORD_AUTH`, key as username, secret as password — and reads the
+   workspace from the ID token, so a wrong or deleted key is caught before
+   anything is saved;
+2. saves them as a profile named after the workspace (`penn-cnt`, `penn-cnt-2`
+   if taken by another key) in `~/.pennsieve/config.ini`, where the terminal
+   command puts them, and makes that file readable by this user alone;
+3. restarts the agent, which reads its config only at start, and switches to
+   the profile.
+
+A key that is already saved just switches to its profile. Saved profiles can be
+switched between from a dropdown.
+
+**This is the one place VoxTool handles a real API key**, which unlike the
+agent's session token never expires. The key and secret are checked before
+being written, written only to the CLI's config, cleared from the dialog after
+each attempt, and never logged, returned, or put in an error;
+`tests/test_pennsieve_connect.py` checks that no response ever contains them,
+including on an unexpected exception.
+
+Restarting the agent would cut off an upload still running in it, so VoxTool
+asks first when one may be (its staged file is still in the outbox).
+
+**Agent 1.8.10 bug: switching hangs after an upload.** Each upload leaves a
+goroutine that, once its 15-minute verify window ends, blocks forever on a
+channel nobody reads; `SwitchProfile` then blocks forever trying to cancel it.
+So VoxTool skips the switch when the profile is already active, and otherwise
+restarts the agent if the switch takes more than 20 seconds.
+
+Untested: a computer with no `~/.pennsieve/config.ini` at all. VoxTool then
+writes one mirroring what the CLI's own setup writes, but this needs trying on
+a fresh machine with the packaged app.
 
 ## Opening a scan from Pennsieve
 
@@ -241,4 +288,6 @@ PennEPI00049 was refused by the dataset lock.
 - The desktop installer has not been rebuilt with `grpcio` and `protobuf`; the
   PyInstaller spec names the new modules, but a packaged build is untested.
 - API keys are per-workspace in Pennsieve, so working in a different workspace
-  needs a new key and a second profile (`pennsieve profile create`).
+  needs a new key, connected as a second profile.
+- VoxTool still needs the Pennsieve agent installed separately; whether to
+  bundle it with the desktop app is undecided.

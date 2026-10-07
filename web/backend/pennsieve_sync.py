@@ -16,6 +16,7 @@ state back afterwards rather than by believing the command worked.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -122,14 +123,37 @@ def _message(out: str) -> str:
 
 
 def allowed_datasets() -> set[str]:
-    """Dataset ids this machine may upload to, from VOXTOOL_PENNSIEVE_DATASETS.
+    """Dataset ids this computer may use, or an empty set for no limit.
 
-    Comma-separated `N:dataset:` ids; unset means any dataset the account can
-    see. While testing it pins uploads to the sandbox, so a wrong pick in the
-    dialog cannot reach a real dataset.
+    Set in VoxTool (stored per computer in the app data folder), or overridden
+    with VOXTOOL_PENNSIEVE_DATASETS, comma-separated `N:dataset:` ids. While
+    testing it pins everything to the sandbox, so a wrong pick in a dialog
+    cannot reach a real dataset.
     """
     raw = os.environ.get("VOXTOOL_PENNSIEVE_DATASETS", "")
-    return {d.strip() for d in raw.split(",") if d.strip()}
+    if raw.strip():
+        return {d.strip() for d in raw.split(",") if d.strip()}
+    return set(load_settings().get("allowed_datasets", []))
+
+
+def _settings_path() -> str:
+    return os.path.join(local_mode.app_data_dir(), "pennsieve-settings.json")
+
+
+def load_settings() -> dict:
+    try:
+        with open(_settings_path(), encoding="utf-8") as f:
+            settings = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return settings if isinstance(settings, dict) else {}
+
+
+def save_settings(settings: dict) -> None:
+    path = _settings_path()
+    with open(path + ".tmp", "w", encoding="utf-8") as f:
+        json.dump(settings, f, indent=2)
+    os.replace(path + ".tmp", path)
 
 
 def outbox_dir() -> str:
@@ -276,9 +300,8 @@ def upload(
     allowed = allowed_datasets()
     if allowed and dataset_id not in allowed:
         raise PennsieveError(
-            "This machine is set up to upload only to "
-            f"{', '.join(sorted(allowed))} (VOXTOOL_PENNSIEVE_DATASETS). "
-            "Nothing was sent."
+            "This computer is set to use only certain datasets, and that is "
+            "not one of them (Pennsieve settings in VoxTool). Nothing was sent."
         )
 
     plan = {
