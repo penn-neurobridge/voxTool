@@ -270,6 +270,12 @@ more, 261 MB against a ~110 MB installer. Only `grpcio` and `protobuf` are
 added, and `pennsieve_agent/agent_pb2.py` is generated from the agent's
 published proto (see that package for how to regenerate it).
 
+**HTTPS uses certifi's CA bundle, not the default context.** A frozen app's
+Python trusts the CA file of the machine that built it. The first GitHub-built
+1.1.0 therefore failed every Pennsieve request on a user's Mac with
+`CERTIFICATE_VERIFY_FAILED`, while builds made on that same Mac worked, so the
+packaged launch test now requires `features.https_certificates`.
+
 **Never let an error repeat what was read from `~/.pennsieve/config.ini`.** The
 CLI writes the default profile's key and secret above the first section header.
 `configparser` rejects that and quotes the line in its error, which once printed

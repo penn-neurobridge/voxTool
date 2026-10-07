@@ -40,6 +40,8 @@ hiddenimports = [
     # Imported only when a Pennsieve session is first needed.
     "pennsieve_agent.agent_pb2",
     "grpc",
+    # Its cacert.pem is what HTTPS trusts in the frozen app; see https_context.
+    "certifi",
 ]
 
 # nibabel resolves several format handlers lazily, so static analysis misses them.

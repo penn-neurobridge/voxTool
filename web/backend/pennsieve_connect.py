@@ -79,7 +79,9 @@ def profiles() -> list[str]:
 def _http_json(url: str, body: dict | None = None, headers: dict | None = None) -> dict:
     data = json.dumps(body).encode() if body is not None else None
     request = urllib.request.Request(url, data=data, headers=headers or {})
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.urlopen(
+        request, timeout=30, context=pennsieve_api.https_context()
+    ) as response:
         return json.load(response)
 
 

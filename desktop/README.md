@@ -68,8 +68,11 @@ This runs the real startup sequence â€” free port, spawn backend, poll health â€
 then drives a synthetic CT through open-in-place, threshold cloud, snap and
 interpolate, and asserts that nothing was written next to the scan file. It
 also reads an invented implant document, and checks the health report says the
-document reader and the Pennsieve client were bundled: both are imported only
-on first use, so a build missing one would otherwise pass everything else.
+document reader and the Pennsieve client were bundled, and that the app carries
+its own CA certificates: all are used only on first use, so a build missing one
+would otherwise pass everything else. The certificates matter because a frozen
+Python trusts the CA path of the machine that built it; a GitHub-built app
+failed every HTTPS request on a user's Mac until certifi's bundle was packaged.
 
 ## Building installers
 

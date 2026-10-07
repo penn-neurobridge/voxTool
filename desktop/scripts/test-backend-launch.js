@@ -128,6 +128,9 @@ async function main() {
     // pass every check above and fail in front of a user.
     check("bundles the implant-document reader", health.features?.document_reading === true);
     check("bundles the Pennsieve agent client", health.features?.pennsieve === true);
+    // Without its own CA bundle a frozen app trusts the build runner's
+    // certificate path, which works on the runner and nowhere else.
+    check("bundles CA certificates for HTTPS", health.features?.https_certificates === true);
 
     const uiRes = await fetch(`${base}/`);
     const html = await uiRes.text();

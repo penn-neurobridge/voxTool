@@ -15,3 +15,7 @@ python-pptx>=1.0
 # was generated for the protobuf 5.x runtime.
 grpcio>=1.71
 protobuf>=5.29,<6
+# CA certificates for HTTPS to Pennsieve. A frozen app's Python looks for them
+# where the build machine's OpenSSL kept them, which does not exist on the
+# user's machine; certifi's bundle travels inside the app.
+certifi>=2024.2

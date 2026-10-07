@@ -66,9 +66,20 @@ def _features() -> dict:
             return False
         return True
 
+    def https_certificates():
+        # certifi itself, not whatever the default context finds: on the build
+        # runner that is a real path, so the check would pass there and the
+        # app would still fail on a user's machine.
+        if not has("certifi"):
+            return False
+        import pennsieve_api
+
+        return pennsieve_api.https_context().cert_store_stats().get("x509_ca", 0) > 0
+
     return {
         "document_reading": has("pymupdf", "pptx"),
         "pennsieve": has("grpc", "pennsieve_agent.agent_pb2"),
+        "https_certificates": https_certificates(),
     }
 
 

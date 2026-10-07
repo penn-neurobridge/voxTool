@@ -69,7 +69,9 @@ def api(tmp_path, monkeypatch):
 
     downloads = []
 
-    def fake_urlopen(url, timeout=None):
+    def fake_urlopen(url, timeout=None, context=None):
+        # Every HTTPS call must carry the bundled CA certificates.
+        assert context is pennsieve_api.https_context()
         downloads.append(url)
         return io.BytesIO(fake_urlopen.body)
 
@@ -200,3 +202,11 @@ class TestRoutes:
         api.monkeypatch.delenv("VOXTOOL_LOCAL")
         assert client.get(f"/api/pennsieve/browse?dataset={DATASET}").status_code == 403
         assert client.post("/api/pennsieve/open", json={"package_id": CT}).status_code == 403
+
+
+def test_https_uses_certificates_packaged_with_the_app():
+    import certifi
+
+    context = pennsieve_api.https_context()
+    assert context.cert_store_stats()["x509_ca"] > 0
+    assert os.path.isfile(certifi.where())

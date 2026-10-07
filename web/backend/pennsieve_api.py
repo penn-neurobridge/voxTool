@@ -15,9 +15,11 @@ set, nothing outside it can be browsed or downloaded either.
 """
 from __future__ import annotations
 
+import functools
 import json
 import os
 import re
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -111,6 +113,22 @@ def _new_session() -> Session:
     )
 
 
+@functools.lru_cache(maxsize=1)
+def https_context() -> ssl.SSLContext:
+    """TLS settings for every HTTPS call to Pennsieve, AWS and S3.
+
+    The default context trusts the CA file that the building machine's OpenSSL
+    knew about. In the packaged app that is a path on GitHub's build runner, so
+    on a user's Mac every request failed with "unable to get local issuer
+    certificate". certifi's bundle is packaged with the app instead.
+    """
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def _get(path: str, params: dict | None = None, retry: bool = True) -> dict:
     global _session
     s = session()
@@ -121,7 +139,7 @@ def _get(path: str, params: dict | None = None, retry: bool = True) -> dict:
         "Accept": "application/json",
     })
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with urllib.request.urlopen(request, timeout=30, context=https_context()) as response:
             return json.load(response)
     except urllib.error.HTTPError as e:
         if e.code == 401 and retry:
@@ -278,7 +296,9 @@ def download_scan(package_id: str) -> dict:
             raise PennsieveError("Pennsieve did not provide a download link for that file.")
         partial = path + ".part"
         try:
-            with urllib.request.urlopen(url, timeout=60) as response, open(partial, "wb") as out:
+            with urllib.request.urlopen(
+                url, timeout=60, context=https_context()
+            ) as response, open(partial, "wb") as out:
                 while chunk := response.read(1 << 20):
                     out.write(chunk)
         except (urllib.error.URLError, OSError) as e:
