@@ -11,8 +11,8 @@ const API = process.env.REACT_APP_API_URL || "";
  * it should never be implicit.
  *
  * "Send for real" is off by default. Leaving it off reports exactly what would
- * happen and sends nothing, which is also how this gets used until the lab
- * workspace exists.
+ * happen and sends nothing. Nor is a dataset ever pre-selected, not even the
+ * agent's active one, which may be a real dataset left over from last time.
  */
 export default function PennsieveUpload({ open, onClose, document, scanFilename, counts }) {
   const [status, setStatus] = useState(null);
@@ -28,20 +28,14 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
     setError("");
     setResult(null);
     setReallySend(false);
-    // Default the folder to the subject, which is how the scans are organised.
-    const base = (scanFilename || "")
-      .replace(/\.(nii\.gz|nii|gz)$/i, "")
-      .replace(/[_-]?ct$/i, "");
-    setTargetPath(base);
+    setDataset("");
+    // The lab keeps VoxTool output here, beside the other derivatives.
+    setTargetPath("derivatives/voxtool_ct");
     fetch(`${API}/api/pennsieve/status?auto_start=1`)
       .then((r) => r.json())
-      .then((d) => {
-        setStatus(d);
-        if (d.active_dataset) setDataset(d.active_dataset);
-        else if (d.datasets?.length === 1) setDataset(d.datasets[0].id);
-      })
+      .then(setStatus)
       .catch((e) => setError(`Could not reach Pennsieve: ${e.message || e}`));
-  }, [open, scanFilename]);
+  }, [open]);
 
   const send = useCallback(async () => {
     setBusy(true);
@@ -118,14 +112,19 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
                   </option>
                 ))}
               </select>
+              {status.restricted && (
+                <p className="muted">
+                  This machine only uploads to the datasets listed here.
+                </p>
+              )}
             </div>
 
             <div className="field">
-              <label>Folder in the dataset (optional)</label>
+              <label>Folder in the dataset</label>
               <input
                 type="text"
                 value={targetPath}
-                placeholder="e.g. sub-03"
+                placeholder="derivatives/voxtool_ct"
                 onChange={(e) => setTargetPath(e.target.value)}
                 disabled={busy}
               />
@@ -148,6 +147,13 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
               />
               Actually send it (leave unticked to preview only)
             </label>
+
+            {busy && reallySend && (
+              <p className="import-progress">
+                Uploading, then waiting for Pennsieve to confirm the file
+                arrived. This can take a minute or two.
+              </p>
+            )}
 
             <div className="modal-actions modal-actions-scan">
               <button className="btn" onClick={onClose} disabled={busy}>
@@ -173,9 +179,7 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
         {result && (
           <>
             <p className={result.uploaded ? "pennsieve-ok" : "import-warning"}>
-              {result.uploaded
-                ? "Uploaded to Pennsieve."
-                : "Preview only — nothing was sent."}
+              {result.dry_run ? "Preview only — nothing was sent." : result.message}
             </p>
             <table className="pennsieve-result">
               <tbody>
@@ -198,7 +202,7 @@ export default function PennsieveUpload({ open, onClose, document, scanFilename,
               </tbody>
             </table>
             <div className="modal-actions modal-actions-scan">
-              {!result.uploaded && (
+              {result.dry_run && (
                 <button className="btn" onClick={() => setResult(null)}>
                   Back
                 </button>

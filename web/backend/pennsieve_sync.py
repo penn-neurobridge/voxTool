@@ -9,6 +9,10 @@ The CLI prints ASCII tables rather than JSON, so the parsing here is
 deliberately forgiving: anything unexpected comes back as "could not read"
 instead of a wrong answer, because the destination of a patient file is the one
 thing that must never be guessed.
+
+Nor can its exit codes be trusted. Every command exits 0 whether or not the
+agent refused it, so each step that matters is checked by reading the agent's
+state back afterwards rather than by believing the command worked.
 """
 from __future__ import annotations
 
@@ -19,12 +23,37 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
+import local_mode
+
 CLI = os.environ.get("VOXTOOL_PENNSIEVE_CLI", "pennsieve")
 _TIMEOUT = 60
+# How long an upload waits for Pennsieve to confirm the file, in seconds.
+UPLOAD_WAIT = 90
 _AGENT_DOWN = "unable to connect to pennsieve agent"
+
+# Per-file states in `pennsieve manifest list`.
+_SENT = {"UPLOADED", "IMPORTED", "FINALIZED", "VERIFIED"}
+_IN_DATASET = {"FINALIZED", "VERIFIED"}
+_FAILED = {"FAILED", "REMOVED"}
+
+_MESSAGES = {
+    "imported": "Uploaded. Pennsieve has it in the dataset.",
+    "sent": (
+        "Sent. Pennsieve is still importing it, so it can take a minute to "
+        "appear in the dataset."
+    ),
+    "pending": (
+        "Still uploading in the background. Check the dataset in a few minutes "
+        "before trying again, or you may end up with two copies."
+    ),
+}
 
 
 class PennsieveError(RuntimeError):
+    pass
+
+
+class PennsieveTimeout(PennsieveError):
     pass
 
 
@@ -37,6 +66,7 @@ class Status:
     workspace_id: str = ""
     datasets: list[dict] = field(default_factory=list)
     active_dataset: str = ""
+    restricted: bool = False
     error: str = ""
 
     def to_json(self) -> dict:
@@ -48,6 +78,7 @@ class Status:
             "workspace_id": self.workspace_id,
             "datasets": self.datasets,
             "active_dataset": self.active_dataset,
+            "restricted": self.restricted,
             "error": self.error,
         }
 
@@ -64,7 +95,7 @@ def _run(args: list[str], timeout: int = _TIMEOUT) -> tuple[int, str]:
     except FileNotFoundError as e:
         raise PennsieveError("The Pennsieve CLI is not installed on this machine.") from e
     except subprocess.TimeoutExpired as e:
-        raise PennsieveError(f"`{CLI} {' '.join(args)}` timed out after {timeout}s.") from e
+        raise PennsieveTimeout(f"`{CLI} {' '.join(args)}` timed out after {timeout}s.") from e
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
@@ -81,6 +112,37 @@ def _table_rows(output: str) -> list[list[str]]:
     return rows
 
 
+def _message(out: str) -> str:
+    """The first line of CLI output worth showing a person."""
+    for line in out.splitlines():
+        line = line.strip()
+        if line and not line.startswith(("+", "|", "Initializing DB")):
+            return line[:200]
+    return "no reason given"
+
+
+def allowed_datasets() -> set[str]:
+    """Dataset ids this machine may upload to, from VOXTOOL_PENNSIEVE_DATASETS.
+
+    Comma-separated `N:dataset:` ids; unset means any dataset the account can
+    see. While testing it pins uploads to the sandbox, so a wrong pick in the
+    dialog cannot reach a real dataset.
+    """
+    raw = os.environ.get("VOXTOOL_PENNSIEVE_DATASETS", "")
+    return {d.strip() for d in raw.split(",") if d.strip()}
+
+
+def outbox_dir() -> str:
+    """Where a file waits while the agent uploads it.
+
+    The agent reads the file in the background after the CLI returns, so it
+    has to outlive the request that wrote it.
+    """
+    path = os.path.join(local_mode.app_data_dir(), "pennsieve-outbox")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def is_installed() -> bool:
     return shutil.which(CLI) is not None
 
@@ -89,8 +151,11 @@ def start_agent(wait: int = 15) -> bool:
     """Start the background agent. Returns True once it answers."""
     if not is_installed():
         return False
+    # The agent resolves relative paths against its own working directory, so
+    # start it somewhere known rather than wherever this process happens to be.
     subprocess.Popen(
         [CLI, "agent"],
+        cwd=outbox_dir(),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
@@ -101,6 +166,16 @@ def start_agent(wait: int = 15) -> bool:
             return True
         time.sleep(1)
     return False
+
+
+def active_dataset() -> str:
+    """The agent's active dataset id, or "" if it has none or cannot say."""
+    _, out = _run(["dataset"])
+    for cells in _table_rows(out):
+        node_id = next((c for c in cells if c.startswith("N:dataset:")), "")
+        if node_id:
+            return node_id
+    return ""
 
 
 def status(auto_start: bool = False) -> Status:
@@ -135,6 +210,8 @@ def status(auto_start: bool = False) -> Status:
         elif key == "ORGANIZATION ID":
             st.workspace_id = value
 
+    allowed = allowed_datasets()
+    st.restricted = bool(allowed)
     code, out = _run(["dataset", "list"])
     if code == 0:
         for cells in _table_rows(out):
@@ -142,16 +219,10 @@ def status(auto_start: bool = False) -> Status:
             if len(cells) < 2 or cells[0].upper() == "NAME":
                 continue
             node_id = next((c for c in cells if c.startswith("N:dataset:")), "")
-            if node_id:
+            if node_id and (not allowed or node_id in allowed):
                 st.datasets.append({"name": cells[0], "id": node_id})
 
-    code, out = _run(["dataset"])
-    if code == 0:
-        for cells in _table_rows(out):
-            node_id = next((c for c in cells if c.startswith("N:dataset:")), "")
-            if node_id:
-                st.active_dataset = node_id
-                break
+    st.active_dataset = active_dataset()
     return st
 
 
@@ -185,12 +256,25 @@ def upload(
     dataset_id: str,
     target_path: str = "",
     dry_run: bool = True,
+    wait: float | None = None,
 ) -> dict:
-    """Send one file to a dataset. With dry_run, reports the plan and stops."""
+    """Send one file to a dataset. With dry_run, reports the plan and stops.
+
+    `state` in the result says how far the file got: "imported" (in the
+    dataset), "sent" (transferred, Pennsieve still importing) or "pending"
+    (still uploading when `wait` ran out; the agent carries on regardless).
+    """
     if not os.path.isfile(local_path):
         raise PennsieveError(f"Nothing to upload at {local_path}.")
     if not dataset_id:
         raise PennsieveError("No dataset chosen.")
+    allowed = allowed_datasets()
+    if allowed and dataset_id not in allowed:
+        raise PennsieveError(
+            "This machine is set up to upload only to "
+            f"{', '.join(sorted(allowed))} (VOXTOOL_PENNSIEVE_DATASETS). "
+            "Nothing was sent."
+        )
 
     plan = {
         "file": os.path.basename(local_path),
@@ -201,41 +285,89 @@ def upload(
     }
     if dry_run:
         plan["uploaded"] = False
+        plan["state"] = "preview"
         plan["message"] = "Dry run — nothing was sent."
         return plan
 
-    code, out = _run(["dataset", "use", dataset_id])
-    if code != 0:
-        raise PennsieveError(_first_error(out) or "Could not select that dataset.")
+    _use_dataset(dataset_id)
+    manifest_id = _create_manifest(local_path, target_path)
+    try:
+        # Starts the transfer, then waits for the agent to announce that an
+        # upload finished — any upload, and possibly never. The manifest is
+        # the real record, so stop listening early and read that instead.
+        _run(["upload", "manifest", manifest_id], timeout=30)
+    except PennsieveTimeout:
+        pass
+    state = _wait_for_file(manifest_id, UPLOAD_WAIT if wait is None else wait)
 
+    plan["uploaded"] = state != "pending"
+    plan["state"] = state
+    plan["manifest_id"] = manifest_id
+    plan["message"] = _MESSAGES[state]
+    return plan
+
+
+def _use_dataset(dataset_id: str) -> None:
+    """Make dataset_id the agent's active dataset, and prove it.
+
+    `dataset use` exits 0 even when it refuses ("Unknown Dataset: …"), and a
+    manifest binds to whichever dataset is active, so believing it would send
+    the file into the previous one — possibly in another workspace.
+    """
+    _, out = _run(["dataset", "use", dataset_id])
+    if active_dataset() != dataset_id:
+        raise PennsieveError(
+            f"Pennsieve did not switch to that dataset ({_message(out)}), so "
+            "nothing was sent. Check that it is in the workspace you are "
+            "signed in to."
+        )
+
+
+def _create_manifest(local_path: str, target_path: str) -> str:
     args = ["manifest", "create"]
     if target_path:
         args += ["--target_path", target_path]
     args.append(local_path)
-    code, out = _run(args, timeout=120)
-    if code != 0:
-        raise PennsieveError(_first_error(out) or "Could not create the upload manifest.")
-
-    manifest_id = _manifest_id(out)
-    if not manifest_id:
-        raise PennsieveError(f"Could not read a manifest id from: {out.strip()[:200]}")
-
-    code, out = _run(["upload", "manifest", manifest_id], timeout=600)
-    if code != 0:
-        raise PennsieveError(_first_error(out) or "The upload failed.")
-
-    plan["uploaded"] = True
-    plan["manifest_id"] = manifest_id
-    plan["message"] = out.strip()[:400]
-    return plan
+    _, out = _run(args, timeout=120)
+    # A failed index still hands back a manifest id, with a different message.
+    m = re.search(r"Manifest ID:\s*(\d+)\s+Message:\s*Successfully indexed (\d+) files", out)
+    if not m or m.group(2) != "1":
+        raise PennsieveError(f"Could not prepare the upload: {_message(out)}")
+    return m.group(1)
 
 
-def _manifest_id(out: str) -> str:
-    m = re.search(r"manifest\s*(?:id)?\s*[:=]?\s*(\d+)", out, re.IGNORECASE)
-    if m:
-        return m.group(1)
+def _file_status(manifest_id: str) -> str:
+    """Status of the one file in a manifest, or "" if it cannot be read."""
+    _, out = _run(["manifest", "list", manifest_id])
     for cells in _table_rows(out):
-        for cell in cells:
-            if cell.isdigit():
-                return cell
+        if len(cells) >= 3 and cells[0].isdigit():
+            return cells[-1].upper()
     return ""
+
+
+def _wait_for_file(manifest_id: str, seconds: float) -> str:
+    """Follow a manifest until its file is in the dataset or time runs out."""
+    deadline = time.monotonic() + seconds
+    last_sync = 0.0
+    while True:
+        state = _file_status(manifest_id)
+        if state in _FAILED:
+            raise PennsieveError(
+                f"Pennsieve reported the upload as {state.lower()}. Run "
+                f"`pennsieve manifest list {manifest_id}` for details."
+            )
+        if state in _IN_DATASET:
+            return "imported"
+        now = time.monotonic()
+        if now >= deadline:
+            return "sent" if state in _SENT else "pending"
+        if state in _SENT and now - last_sync >= 10:
+            # Only a sync asks the server whether the import has finished. It
+            # also waits on an agent event, so a timeout here is normal.
+            last_sync = now
+            try:
+                _run(["manifest", "sync", manifest_id], timeout=20)
+            except PennsieveTimeout:
+                pass
+            continue
+        time.sleep(2)

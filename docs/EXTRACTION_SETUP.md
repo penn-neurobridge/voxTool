@@ -145,7 +145,40 @@ defaults `dry_run` to true as well, so a mis-wired button cannot upload.
 
 **The destination is always shown**: workspace, dataset, folder, filename.
 Whatever lands in a dataset inherits that dataset's permissions, so choosing the
-dataset *is* the access decision and must never be implicit.
+dataset *is* the access decision and must never be implicit. No dataset is
+pre-selected, not even the agent's active one. The folder defaults to
+`derivatives/voxtool_ct`, where the lab keeps VoxTool output. Pennsieve's upload
+service source reuses an existing folder of the same name rather than making a
+second one.
+
+The first real upload (2026-10-06, a made-up test file into the VoxTool Test
+sandbox in Penn CNT) landed in `derivatives/voxtool_ct` as intended. The agent
+still listed the file as UPLOADED after a `manifest sync`, though it was already
+visible in the dataset, so in practice the dialog reports "sent" rather than "in
+the dataset". Confirming the import needs the REST API.
+
+**Limiting uploads to one dataset.** Set `VOXTOOL_PENNSIEVE_DATASETS` to a
+comma-separated list of `N:dataset:` ids and the dialog lists only those, and
+the server refuses any other before running the CLI at all. Use it while
+testing so that only the sandbox dataset can be reached.
+
+**The CLI's word is never taken for anything.** Every `pennsieve` command exits 0
+whether or not it worked. In particular, `dataset use` with a dataset the
+signed-in workspace cannot see prints "Unknown Dataset" and leaves the previous
+dataset active, and the upload would then go *there*. So each step is checked by
+reading the agent's state back: the active dataset must equal the chosen one
+before a manifest is created, the manifest must report exactly one file indexed,
+and the result is decided by the file's status in `pennsieve manifest list`,
+not by the upload command returning. The dialog reports one of three outcomes:
+in the dataset, sent but still being imported by Pennsieve, or still uploading
+in the background. The file waits in the app data folder's `pennsieve-outbox`
+until the agent has sent it. `tests/test_pennsieve.py` covers each of these
+against a fake CLI.
+
+**The agent listens on the network.** Its gRPC port (9000) binds every
+interface, not just this machine, and anyone who can reach it can ask for the
+signed-in session. Stop it with `pennsieve agent stop` when you are not
+uploading, especially on shared or public Wi-Fi.
 
 Filenames are derived from the scan and stamped with the time —
 `sub-03_ct.nii.gz` becomes `sub-03_voxel_coordinates_20260929-1804.json`. There
@@ -154,7 +187,14 @@ replacing one, because losing an earlier annotation is worse than keeping two.
 
 ### Not done yet
 
-- Only the coordinates are uploaded, not the CT or the implant document.
-- Pulling a scan *from* Pennsieve to annotate is not implemented.
+- Only the coordinates are uploaded, as JSON, not the CT or the implant
+  document. The lab's existing datasets keep an `electrodes.txt` in
+  `derivatives/voxtool_ct`; whether to write that format instead is open.
+- Pulling a scan *from* Pennsieve to annotate is not implemented, and neither is
+  choosing a destination by its Pennsieve id. The CLI can do neither usefully:
+  `download package` writes into the agent's working directory in the
+  background and never reports where, and `--target_path` takes only a path.
+  Both need the REST API, authenticated with the session token the agent hands
+  out over gRPC, which is how Pennsieve's own Python client works.
 - API keys are per-workspace in Pennsieve, so working in a different workspace
   needs a new key and a second profile (`pennsieve profile create`).

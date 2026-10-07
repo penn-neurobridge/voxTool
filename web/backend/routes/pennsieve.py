@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
 
 from flask import Blueprint, jsonify, request
@@ -74,10 +75,11 @@ def upload():
         return jsonify({"success": False, "error": "Choose a dataset first."}), 400
 
     name = pennsieve_sync.remote_filename(scan_filename)
-    tmp_dir = tempfile.mkdtemp(prefix="voxtool-pennsieve-")
+    staging_dir = tempfile.mkdtemp(dir=pennsieve_sync.outbox_dir())
     # Written under its final name: the agent uses the filename on disk as the
     # name in the dataset.
-    local_path = os.path.join(tmp_dir, name)
+    local_path = os.path.join(staging_dir, name)
+    keep = False
     try:
         with open(local_path, "w") as f:
             json.dump(document, f, indent=2)
@@ -88,6 +90,8 @@ def upload():
             target_path=target_path,
             dry_run=dry_run,
         )
+        # The agent is still reading it; deleting it now would drop the upload.
+        keep = result.get("state") == "pending"
         result["success"] = True
         result["filename"] = name
         return jsonify(result)
@@ -96,8 +100,5 @@ def upload():
     except Exception as e:  # noqa: BLE001
         return jsonify({"success": False, "error": f"Upload failed: {e}"}), 500
     finally:
-        try:
-            os.remove(local_path)
-            os.rmdir(tmp_dir)
-        except OSError:
-            pass
+        if not keep:
+            shutil.rmtree(staging_dir, ignore_errors=True)
