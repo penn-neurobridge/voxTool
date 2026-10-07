@@ -132,6 +132,22 @@ def switch_profile():
     return jsonify(result)
 
 
+@pennsieve_bp.route("/remove-profile", methods=["POST"])
+def remove_profile():
+    """Delete a saved, inactive profile from this computer. Body: {profile}."""
+    refusal = _refuse_if_cloud()
+    if refusal:
+        return refusal
+    profile = ((request.get_json(silent=True) or {}).get("profile") or "").strip()
+    try:
+        left = pennsieve_connect.remove_profile(profile)
+    except pennsieve_sync.PennsieveError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:  # noqa: BLE001
+        return _unexpected(e)
+    return jsonify({"success": True, "profiles": left})
+
+
 @pennsieve_bp.route("/settings", methods=["GET", "POST"])
 def settings():
     """This computer's dataset limit. Body: {allowed_datasets: [N:dataset:…]}, [] for none."""

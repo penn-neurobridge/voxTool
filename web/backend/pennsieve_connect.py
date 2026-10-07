@@ -265,6 +265,45 @@ def switch(profile: str, expected_workspace_id: str = "", force: bool = False) -
     return {"profile": profile, **who}
 
 
+def remove_profile(profile: str) -> list[str]:
+    """Delete a saved profile from the CLI's config. Returns the profiles left.
+
+    Rewritten line by line, as it is read: the profile's section (or, for
+    "default", the key lines above the first header) goes, nothing else moves.
+    The key itself stays valid on Pennsieve until deleted there.
+    """
+    if profile not in profiles():
+        raise PennsieveError(f"There is no saved Pennsieve profile called {profile}.")
+    active = _active_profile()
+    if profile == active:
+        raise PennsieveError("That profile is in use. Switch to another one first.")
+
+    path = config_path()
+    with open(path, encoding="utf-8") as f:
+        lines = f.readlines()
+    kept, section = [], "default"
+    for line in lines:
+        stripped = line.strip()
+        is_header = stripped.startswith("[") and stripped.endswith("]")
+        if is_header:
+            section = stripped[1:-1].strip()
+        if section == profile and (is_header or stripped):
+            continue
+        if (
+            section.lower() == "global"
+            and stripped.lower().replace(" ", "").startswith("default_profile=")
+            and stripped.split("=", 1)[1].strip() == profile
+        ):
+            line = f"default_profile={active}\n"
+        kept.append(line)
+
+    fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.writelines(kept)
+    os.replace(path + ".tmp", path)
+    return profiles()
+
+
 def connect(api_key: str, api_secret: str, force: bool = False) -> dict:
     """Check a key, save it as a profile named after its workspace, switch to it."""
     api_key, api_secret = api_key.strip(), api_secret.strip()

@@ -16,12 +16,14 @@ async function postJson(path, body) {
 }
 
 /**
- * Sign in to Pennsieve, switch workspace, and set which datasets this computer
- * may use, all without a terminal.
+ * Sign in to Pennsieve, switch or remove saved workspaces, and set which
+ * datasets this computer may use, all without a terminal.
  *
  * The API key and secret live in this component's state only until the
- * Connect request returns; they are cleared whatever the outcome. The backend
- * checks them with Pennsieve before saving them anywhere.
+ * Connect request returns, and are cleared after every attempt. The secret box
+ * is a masked text field, not type="password", and there is no <form>:
+ * browsers offer to save, and then refill, anything that looks like a login,
+ * which would put the secret in the browser's password manager.
  */
 export default function PennsieveConnect({ open, onClose }) {
   const [status, setStatus] = useState(null);
@@ -30,6 +32,7 @@ export default function PennsieveConnect({ open, onClose }) {
   const [profile, setProfile] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+  const [showSecret, setShowSecret] = useState(false);
   const [busy, setBusy] = useState("");
   const [needsForce, setNeedsForce] = useState(null);
   const [message, setMessage] = useState(null);
@@ -41,7 +44,7 @@ export default function PennsieveConnect({ open, onClose }) {
       .then((r) => r.json())
       .then((d) => {
         setStatus(d);
-        setProfile(d.profile || "");
+        setProfile(d.profile || d.profiles?.[0] || "");
       })
       .catch((e) => setMessage({ error: `Could not reach Pennsieve: ${e.message || e}` }));
     fetch(`${API}/api/pennsieve/settings`)
@@ -58,11 +61,13 @@ export default function PennsieveConnect({ open, onClose }) {
     setMessage(null);
     setNeedsForce(null);
     setChanged(false);
+    setShowSecret(false);
     load();
   }, [open, load]);
 
   const connect = useCallback(
     async (force = false) => {
+      if (!apiKey.trim() || !apiSecret.trim()) return;
       setBusy("Checking the key with Pennsieve…");
       setMessage(null);
       setNeedsForce(null);
@@ -92,10 +97,10 @@ export default function PennsieveConnect({ open, onClose }) {
       } catch (e) {
         setMessage({ error: e.message || String(e) });
       } finally {
-        // Never keep a key around longer than one attempt.
         if (!keep) {
           setApiKey("");
           setApiSecret("");
+          setShowSecret(false);
         }
         setBusy("");
       }
@@ -131,6 +136,28 @@ export default function PennsieveConnect({ open, onClose }) {
     [profile, load]
   );
 
+  const removeProfile = useCallback(async () => {
+    if (
+      !window.confirm(
+        `Remove the saved profile "${profile}" from this computer?\n\n` +
+          "Its API key stays valid on Pennsieve until you delete it there."
+      )
+    )
+      return;
+    setBusy(`Removing ${profile}…`);
+    setMessage(null);
+    try {
+      const { ok, data } = await postJson("/api/pennsieve/remove-profile", { profile });
+      if (!ok) throw new Error(data.error);
+      setMessage({ ok: `Removed profile "${profile}".` });
+      load();
+    } catch (e) {
+      setMessage({ error: e.message || String(e) });
+    } finally {
+      setBusy("");
+    }
+  }, [profile, load]);
+
   const saveLimit = useCallback(async () => {
     setBusy("Saving…");
     setMessage(null);
@@ -139,7 +166,7 @@ export default function PennsieveConnect({ open, onClose }) {
       if (!ok) throw new Error(data.error);
       setMessage({
         ok: allowed.length
-          ? `This computer now uses only the ${allowed.length} checked dataset${
+          ? `This computer now uses only the ${allowed.length} ticked dataset${
               allowed.length === 1 ? "" : "s"
             }.`
           : "No limit: every dataset you can edit is offered for uploads.",
@@ -155,8 +182,12 @@ export default function PennsieveConnect({ open, onClose }) {
   if (!open) return null;
 
   const connected = status?.agent_running;
+  const active = status?.profile;
   const toggle = (id) =>
     setAllowed((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const onEnter = (e) => {
+    if (e.key === "Enter") connect(false);
+  };
 
   return (
     <div
@@ -167,12 +198,24 @@ export default function PennsieveConnect({ open, onClose }) {
         if (!busy) onClose(changed);
       }}
     >
-      <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-medium" onClick={(e) => e.stopPropagation()}>
         <h2>Pennsieve connection</h2>
 
         {message?.error && <p className="import-error">{message.error}</p>}
         {message?.ok && <p className="pennsieve-ok">{message.ok}</p>}
         {busy && <p className="import-progress">{busy}</p>}
+        {needsForce && (
+          <div className="modal-actions" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              className="btn"
+              disabled={!!busy}
+              onClick={() => (needsForce === "switch" ? switchTo(true) : connect(true))}
+            >
+              {needsForce === "switch" ? "Switch anyway" : "Connect anyway"}
+            </button>
+          </div>
+        )}
 
         {!status && <p className="muted">Checking Pennsieve on this computer…</p>}
 
@@ -197,7 +240,7 @@ export default function PennsieveConnect({ open, onClose }) {
                   </div>
                   <div>
                     <span className="muted">Workspace</span> <strong>{status.workspace}</strong>
-                    {status.profile && <span className="muted"> · profile {status.profile}</span>}
+                    {active && <span className="muted"> · profile {active}</span>}
                   </div>
                 </>
               ) : (
@@ -205,102 +248,131 @@ export default function PennsieveConnect({ open, onClose }) {
               )}
             </div>
 
-            {status.profiles?.length > 1 && (
-              <div className="field">
-                <label>Switch workspace (saved profiles)</label>
-                <div style={{ display: "flex", gap: 8 }}>
+            {status.profiles?.length > 0 && (
+              <section className="pennsieve-section">
+                <h3>Workspace</h3>
+                <p className="pennsieve-help">
+                  Each saved profile is one API key for one workspace.
+                </p>
+                <div className="pennsieve-input-row">
                   <select
-                    style={{ flex: 1 }}
                     value={profile}
                     onChange={(e) => setProfile(e.target.value)}
                     disabled={!!busy}
                   >
-                    {!status.profile && <option value="">— choose —</option>}
                     {status.profiles.map((p) => (
                       <option key={p} value={p}>
                         {p}
+                        {p === active ? " (in use)" : ""}
                       </option>
                     ))}
                   </select>
                   <button
                     type="button"
                     className="btn"
-                    disabled={!!busy || !profile || profile === status.profile}
+                    disabled={!!busy || !profile || profile === active}
                     onClick={() => switchTo(false)}
                   >
                     Switch
                   </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={!!busy || !profile || profile === active}
+                    title={profile === active ? "Switch to another profile first" : ""}
+                    onClick={removeProfile}
+                  >
+                    Remove
+                  </button>
                 </div>
-              </div>
+              </section>
             )}
 
-            <form
-              className="field"
-              autoComplete="off"
-              onSubmit={(e) => {
-                e.preventDefault();
-                connect(false);
-              }}
-            >
-              <label>Connect a workspace</label>
-              <p className="muted" style={{ marginTop: 0 }}>
-                On{" "}
-                <a href={PENNSIEVE_APP} target="_blank" rel="noreferrer">
-                  Pennsieve
-                </a>
-                , open <strong>Account Settings → API Keys</strong>, choose the workspace, and
-                press <strong>Create API Key</strong>. Paste the key and secret here. They are
-                checked with Pennsieve, then saved only in Pennsieve's own settings on this
-                computer.
-              </p>
-              <input
-                type="text"
-                placeholder="API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                disabled={!!busy}
-                spellCheck={false}
-              />
-              <input
-                type="password"
-                placeholder="API secret"
-                value={apiSecret}
-                onChange={(e) => setApiSecret(e.target.value)}
-                disabled={!!busy}
-                style={{ marginTop: 8 }}
-              />
-              <div className="modal-actions" style={{ marginTop: 8 }}>
+            <section className="pennsieve-section">
+              <h3>Connect a workspace</h3>
+              <ol className="pennsieve-steps">
+                <li>
+                  On{" "}
+                  <a href={PENNSIEVE_APP} target="_blank" rel="noreferrer">
+                    Pennsieve
+                  </a>
+                  , open <strong>Account Settings → API Keys</strong>.
+                </li>
+                <li>
+                  Choose the workspace and press <strong>Create API Key</strong>.
+                </li>
+                <li>Paste the key and secret below.</li>
+              </ol>
+
+              <div className="field">
+                <label htmlFor="pennsieve-api-key">API key</label>
+                <input
+                  id="pennsieve-api-key"
+                  type="text"
+                  name="voxtool-pennsieve-key"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  spellCheck={false}
+                  placeholder="1a2b3c4d-…"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  onKeyDown={onEnter}
+                  disabled={!!busy}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="pennsieve-api-secret">API secret</label>
+                <div className="pennsieve-input-row">
+                  <input
+                    id="pennsieve-api-secret"
+                    type="text"
+                    name="voxtool-pennsieve-secret"
+                    className={showSecret ? "" : "masked-input"}
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    spellCheck={false}
+                    placeholder="Shown once on Pennsieve, when the key is made"
+                    value={apiSecret}
+                    onChange={(e) => setApiSecret(e.target.value)}
+                    onKeyDown={onEnter}
+                    disabled={!!busy}
+                  />
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => setShowSecret((s) => !s)}
+                    disabled={!!busy}
+                  >
+                    {showSecret ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <div className="pennsieve-input-row" style={{ alignItems: "flex-start" }}>
+                <p className="pennsieve-help" style={{ flex: 1, margin: 0 }}>
+                  Checked with Pennsieve first, then saved only in Pennsieve's own settings on
+                  this computer.
+                </p>
                 <button
-                  type="submit"
+                  type="button"
                   className="btn btn-primary"
                   disabled={!!busy || !apiKey.trim() || !apiSecret.trim()}
+                  onClick={() => connect(false)}
                 >
                   Connect
                 </button>
               </div>
-            </form>
-
-            {needsForce && (
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={!!busy}
-                  onClick={() => (needsForce === "switch" ? switchTo(true) : connect(true))}
-                >
-                  {needsForce === "switch" ? "Switch anyway" : "Connect anyway"}
-                </button>
-              </div>
-            )}
+            </section>
 
             {connected && (
-              <div className="field">
-                <label>Datasets this computer may use</label>
-                <p className="muted" style={{ marginTop: 0 }}>
+              <section className="pennsieve-section">
+                <h3>Datasets this computer may use</h3>
+                <p className="pennsieve-help">
                   Tick datasets to limit uploads, browsing and downloads to them. With none
                   ticked, every dataset you can edit is offered for uploads.
                   {overridden &&
-                    " This is overridden on this computer by VOXTOOL_PENNSIEVE_DATASETS."}
+                    " Overridden on this computer by VOXTOOL_PENNSIEVE_DATASETS."}
                 </p>
                 <div className="pennsieve-list">
                   {(status.datasets || []).map((d) => (
@@ -326,7 +398,7 @@ export default function PennsieveConnect({ open, onClose }) {
                     Save limit
                   </button>
                 </div>
-              </div>
+              </section>
             )}
           </>
         )}

@@ -1370,3 +1370,75 @@ input:focus {
   color: var(--text-secondary);
   cursor: default;
 }
+
+/* Links in dialogs: the browser's default blue is unreadable on the panel. */
+.modal a {
+  color: var(--accent);
+}
+
+.modal a:hover {
+  color: var(--accent-hover);
+}
+
+.pennsieve-section {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.pennsieve-section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text-primary);
+}
+
+.pennsieve-help {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+
+.pennsieve-steps {
+  margin: 4px 0 12px;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.pennsieve-steps strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.pennsieve-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pennsieve-input-row > select,
+.pennsieve-input-row > input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Masks the API secret without type="password", which browsers offer to
+   save and then refill. Chromium and WebKit, which covers Electron. */
+.masked-input {
+  -webkit-text-security: disc;
+}
+
+/* Browser autofill paints inputs white; keep them on the dark panel. */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
+  -webkit-text-fill-color: var(--text-primary);
+}
+
+.modal-medium {
+  max-width: 620px;
+  width: 90vw;
+}

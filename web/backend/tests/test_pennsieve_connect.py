@@ -208,6 +208,30 @@ class TestSwitch:
             pennsieve_connect.switch("nope")
 
 
+class TestRemoveProfile:
+    def test_removes_one_section_and_nothing_else(self, pennsieve, home):
+        pennsieve["active"] = "default"
+        assert pennsieve_connect.remove_profile("penn-cnt") == ["default"]
+        text = home.read_text()
+        assert "penn-cnt" not in text and "another-secret" not in text
+        assert "[agent]\nport=9000" in text and text.startswith("api_secret=old-secret")
+        assert stat.S_IMODE(os.stat(home).st_mode) == 0o600
+
+    def test_removing_default_drops_only_its_keys_and_repoints_the_default(self, pennsieve, home):
+        pennsieve["active"] = "penn-cnt"
+        assert pennsieve_connect.remove_profile("default") == ["penn-cnt"]
+        text = home.read_text()
+        assert "old-secret" not in text and "old-token" not in text
+        assert "default_profile=penn-cnt" in text
+        assert "[penn-cnt]\napi_token=another-token" in text
+
+    def test_refuses_the_profile_in_use(self, pennsieve, home):
+        pennsieve["active"] = "penn-cnt"
+        with pytest.raises(PennsieveError, match="in use"):
+            pennsieve_connect.remove_profile("penn-cnt")
+        assert home.read_text() == EXISTING_CONFIG
+
+
 class TestRoutes:
     @pytest.fixture
     def client(self, home, monkeypatch):
@@ -244,5 +268,6 @@ class TestRoutes:
 
     def test_refused_outside_the_desktop_app(self, client, monkeypatch):
         monkeypatch.delenv("VOXTOOL_LOCAL")
-        for path in ("/api/pennsieve/connect", "/api/pennsieve/switch", "/api/pennsieve/settings"):
+        for path in ("/api/pennsieve/connect", "/api/pennsieve/switch", "/api/pennsieve/settings",
+                     "/api/pennsieve/remove-profile"):
             assert client.post(path, json={}).status_code == 403

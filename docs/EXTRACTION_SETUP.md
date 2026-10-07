@@ -221,12 +221,16 @@ each part to the existing folder of that name.
    the profile.
 
 A key that is already saved just switches to its profile. Saved profiles can be
-switched between from a dropdown.
+switched between, or removed (any but the one in use), from a dropdown;
+removing one leaves its key valid on Pennsieve until deleted there.
 
 **This is the one place VoxTool handles a real API key**, which unlike the
 agent's session token never expires. The key and secret are checked before
 being written, written only to the CLI's config, cleared from the dialog after
-each attempt, and never logged, returned, or put in an error;
+each attempt, and never logged, returned, or put in an error. The secret box is
+a masked text field in no `<form>`, not `type="password"`: the first version
+used a password field, and the browser refilled the secret after connecting,
+apparently having saved it as a login.
 `tests/test_pennsieve_connect.py` checks that no response ever contains them,
 including on an unexpected exception.
 
