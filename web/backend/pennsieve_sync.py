@@ -26,7 +26,16 @@ from dataclasses import dataclass, field
 
 import local_mode
 
-CLI = os.environ.get("VOXTOOL_PENNSIEVE_CLI", "pennsieve")
+# Set to force a particular CLI (the tests point it at a fake); else found by cli().
+CLI = os.environ.get("VOXTOOL_PENNSIEVE_CLI", "")
+# Where the agent's installers put it: macOS and Linux link it into
+# /usr/local/bin, Windows installs under Program Files.
+_CLI_LOCATIONS = (
+    "/usr/local/bin/pennsieve",
+    "/usr/local/opt/pennsieve/pennsieve",
+    "/opt/homebrew/bin/pennsieve",
+    os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Pennsieve", "pennsieve.exe"),
+)
 _TIMEOUT = 60
 # How long an upload waits for Pennsieve to confirm the file, in seconds.
 UPLOAD_WAIT = 90
@@ -88,7 +97,7 @@ def _run(args: list[str], timeout: int = _TIMEOUT) -> tuple[int, str]:
     """Run the CLI and return (exit code, combined output)."""
     try:
         proc = subprocess.run(
-            [CLI, *args],
+            [cli(), *args],
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -96,7 +105,7 @@ def _run(args: list[str], timeout: int = _TIMEOUT) -> tuple[int, str]:
     except FileNotFoundError as e:
         raise PennsieveError("The Pennsieve CLI is not installed on this machine.") from e
     except subprocess.TimeoutExpired as e:
-        raise PennsieveTimeout(f"`{CLI} {' '.join(args)}` timed out after {timeout}s.") from e
+        raise PennsieveTimeout(f"`pennsieve {' '.join(args)}` timed out after {timeout}s.") from e
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
@@ -167,8 +176,24 @@ def outbox_dir() -> str:
     return path
 
 
+def cli() -> str:
+    """The `pennsieve` executable to run.
+
+    The search path alone is not enough: an app opened from Finder gets
+    PATH=/usr/bin:/bin:/usr/sbin:/sbin, which misses /usr/local/bin, so the
+    desktop app would report the CLI missing on a machine that has it.
+    """
+    if CLI:
+        return CLI
+    found = shutil.which("pennsieve")
+    if found:
+        return found
+    return next((p for p in _CLI_LOCATIONS if os.path.isfile(p)), "pennsieve")
+
+
 def is_installed() -> bool:
-    return shutil.which(CLI) is not None
+    path = cli()
+    return os.path.isfile(path) or shutil.which(path) is not None
 
 
 def start_agent(wait: int = 15) -> bool:
@@ -178,7 +203,7 @@ def start_agent(wait: int = 15) -> bool:
     # The agent resolves relative paths against its own working directory, so
     # start it somewhere known rather than wherever this process happens to be.
     subprocess.Popen(
-        [CLI, "agent"],
+        [cli(), "agent"],
         cwd=outbox_dir(),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

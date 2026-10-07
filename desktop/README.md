@@ -11,7 +11,7 @@ Electron window  →  http://127.0.0.1:<random port>  →  Flask (frozen)  →  
 ## How it differs from the cloud build
 
 Both builds run from the same source. The desktop build sets `VOXTOOL_LOCAL=1`,
-which changes five things:
+which changes these things:
 
 | | Cloud | Desktop |
 | --- | --- | --- |
@@ -20,9 +20,14 @@ which changes five things:
 | Derived caches | written beside the scan / to S3 | per-user app data folder |
 | Cloud cache build | detached subprocess | background thread |
 | Network binding | `0.0.0.0`, public via CloudFront | `127.0.0.1` only |
+| Reading implant documents | refused | available; the local model needs [Ollama](https://ollama.com) running |
+| Pennsieve upload, open, connect | refused | available; needs the [Pennsieve agent](https://docs.pennsieve.io/docs/the-pennsieve-agent) installed |
 
 `boto3` is excluded from the frozen bundle, so the desktop app has no code path
-that can reach AWS at all.
+to VoxTool's own S3 storage. It does make outbound requests when someone uses
+the Pennsieve features: to Pennsieve's API, to Amazon Cognito when a key is
+connected, and to the S3 links Pennsieve hands out when a scan is opened from
+there. Nothing else leaves the machine.
 
 ## Layout
 
@@ -61,7 +66,10 @@ npm test
 
 This runs the real startup sequence — free port, spawn backend, poll health —
 then drives a synthetic CT through open-in-place, threshold cloud, snap and
-interpolate, and asserts that nothing was written next to the scan file.
+interpolate, and asserts that nothing was written next to the scan file. It
+also reads an invented implant document, and checks the health report says the
+document reader and the Pennsieve client were bundled: both are imported only
+on first use, so a build missing one would otherwise pass everything else.
 
 ## Building installers
 

@@ -32,6 +32,7 @@ hiddenimports = [
     "scan_store",
     "routes.scans",
     "routes.annotations",
+    "routes.extract",
     "routes.pennsieve",
     "pennsieve_sync",
     "pennsieve_api",
@@ -42,13 +43,17 @@ hiddenimports = [
 ]
 
 # nibabel resolves several format handlers lazily, so static analysis misses them.
-for pkg in ("nibabel",):
+# pymupdf and python-pptx are imported only when a document is read, and pptx
+# also needs its bundled XML templates.
+for pkg in ("nibabel", "pymupdf", "pptx"):
     pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
     datas += pkg_datas
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
 
 hiddenimports += collect_submodules("numpy")
+# The document reader loads its providers by name.
+hiddenimports += collect_submodules("extraction")
 
 a = Analysis(
     ["desktop_server.py"],

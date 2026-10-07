@@ -49,6 +49,22 @@ nib.save(nib.Nifti1Image(vol, aff), ${JSON.stringify(out)})
   return out;
 }
 
+/** An invented implant PDF whose channel map holds LA1-8 and RB1-6. */
+function makeDocument(python, dir) {
+  const out = path.join(dir, "invented_implant.pdf");
+  const script = `
+import pymupdf
+doc = pymupdf.open()
+page = doc.new_page()
+grid = " ".join(f"LA{i}" for i in range(1, 9)) + "\\n" + " ".join(f"RB{i}" for i in range(1, 7))
+page.insert_text((72, 72), "Channel map\\n" + grid, fontsize=10)
+doc.save(${JSON.stringify(out)})
+`;
+  const { execFileSync } = require("child_process");
+  execFileSync(python, ["-c", script], { stdio: "inherit" });
+  return out;
+}
+
 /** Prefer the freeze venv (has nibabel); fall back to whatever CI exposes. */
 function fixturePython() {
   if (process.env.VOXTOOL_PYTHON) return process.env.VOXTOOL_PYTHON;
@@ -108,6 +124,10 @@ async function main() {
       typeof health.data_dir === "string" && !health.data_dir.includes("web/backend/data"),
       health.data_dir
     );
+    // Both are imported only on first use, so a build missing them would still
+    // pass every check above and fail in front of a user.
+    check("bundles the implant-document reader", health.features?.document_reading === true);
+    check("bundles the Pennsieve agent client", health.features?.pennsieve === true);
 
     const uiRes = await fetch(`${base}/`);
     const html = await uiRes.text();
@@ -214,6 +234,27 @@ async function main() {
     // Closing must not delete the user's data.
     await fetch(api(`/${name}`), { method: "DELETE" });
     check("closing a scan leaves the file on disk", fs.existsSync(fixture));
+
+    // Implant documents: read an invented channel map, no model needed.
+    const doc = makeDocument(python, path.dirname(fixture));
+    const form = new FormData();
+    form.append("path", doc);
+    form.append("provider", "none");
+    const extracted = await (
+      await fetch(`${base}/api/extract/leads`, { method: "POST", body: form })
+    ).json();
+    const counts = Object.fromEntries(
+      (extracted.leads || []).map((l) => [l.name, l.contacts])
+    );
+    check(
+      "reads leads from an implant document",
+      extracted.success === true && counts.LA === 8 && counts.RB === 6,
+      extracted.error || JSON.stringify(counts)
+    );
+
+    // Pennsieve answers with or without the agent installed, never a crash.
+    const ps = await fetch(`${base}/api/pennsieve/status`);
+    check("Pennsieve status answers", ps.ok, `HTTP ${ps.status}`);
 
     fs.rmSync(path.dirname(fixture), { recursive: true, force: true });
   } catch (err) {

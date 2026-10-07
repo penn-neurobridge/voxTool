@@ -4,7 +4,8 @@ Electrode contact localization on post-implant CT.
 
 ### [Download VoxTool for macOS or Windows →](../../releases/latest)
 
-Runs fully offline; your scans never leave your computer. First launch shows an
+Runs offline; your scans never leave your computer unless you send them to
+Pennsieve yourself. First launch shows an
 "unidentified developer" or SmartScreen warning because the builds are not yet
 code-signed — [how to get past it](#install).
 
@@ -36,7 +37,10 @@ superseded by the three above.
 
 Same tool as the cloud version — same picking, snapping, interpolation and
 export — but everything runs on your own machine. **No scan data leaves the
-computer:** the app binds to loopback only and makes no outbound requests.
+computer** unless you use the Pennsieve features: the app binds to loopback
+only, and its only outbound requests are to Pennsieve (and Amazon's sign-in and
+storage behind it) when you connect, upload or open a scan from there. Reading
+an implant document with the local model talks to Ollama on this machine.
 
 Use this build for any identifiable or otherwise restricted imaging.
 

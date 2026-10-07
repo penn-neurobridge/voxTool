@@ -348,3 +348,15 @@ class TestRoute:
         fake.monkeypatch.delenv("VOXTOOL_LOCAL")
         assert client.get("/api/pennsieve/status").status_code == 403
         assert client.post("/api/pennsieve/upload", json={}).status_code == 403
+
+
+def test_cli_is_found_outside_a_finder_launched_path(tmp_path, monkeypatch):
+    # An app opened from Finder gets PATH=/usr/bin:/bin:/usr/sbin:/sbin.
+    installed = tmp_path / "pennsieve"
+    installed.write_text("#!/bin/sh\n")
+    installed.chmod(0o755)
+    monkeypatch.setattr(pennsieve_sync, "CLI", "")
+    monkeypatch.setenv("PATH", "/usr/bin:/bin:/usr/sbin:/sbin")
+    monkeypatch.setattr(pennsieve_sync, "_CLI_LOCATIONS", ("/nowhere/pennsieve", str(installed)))
+    assert pennsieve_sync.cli() == str(installed)
+    assert pennsieve_sync.is_installed()

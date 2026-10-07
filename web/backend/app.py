@@ -1,3 +1,5 @@
+import functools
+import importlib
 import os
 import sys
 
@@ -47,6 +49,29 @@ def _static_dir():
     return ""
 
 
+@functools.lru_cache(maxsize=1)
+def _features() -> dict:
+    """Which optional libraries this build carries.
+
+    They are imported lazily or only on demand, so a frozen app missing one
+    still starts and passes health, then fails the first time it is used. The
+    desktop launch test reads this instead of waiting for that.
+    """
+
+    def has(*modules):
+        try:
+            for module in modules:
+                importlib.import_module(module)
+        except Exception:  # noqa: BLE001
+            return False
+        return True
+
+    return {
+        "document_reading": has("pymupdf", "pptx"),
+        "pennsieve": has("grpc", "pennsieve_agent.agent_pb2"),
+    }
+
+
 def create_app():
     # Flask's built-in /static route would shadow serve_ui and 404 the CRA bundle.
     app = Flask(__name__, static_folder=None)
@@ -89,6 +114,7 @@ def create_app():
                 "data_dir": app.config["DATA_DIR"],
                 "ui": bool(static_dir),
                 "static_dir": static_dir or None,
+                "features": _features(),
             }
         )
 
