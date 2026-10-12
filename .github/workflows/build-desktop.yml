@@ -119,6 +119,12 @@ jobs:
       contents: write
 
     steps:
+      - name: Fetch the changelog for the release notes
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: CHANGELOG.txt
+          sparse-checkout-cone-mode: false
+
       - name: Download every platform's installers
         uses: actions/download-artifact@v4
         with:
@@ -147,8 +153,8 @@ jobs:
           printf '  %s\n' "${files[@]}"
 
           cat > notes.md <<'EOF'
-          VoxTool runs entirely on your own machine. Scans are read in place from
-          your disk and nothing is uploaded anywhere.
+          VoxTool runs on your own machine. Scans are read in place from your disk,
+          and nothing is uploaded unless you send it to Pennsieve yourself.
 
           ### Which file do I want?
 
@@ -182,6 +188,14 @@ jobs:
           See the "Run from source" section of the README. It does exactly the same
           things as these installers.
           EOF
+
+          # This version's CHANGELOG entry: from its header to the next one.
+          {
+            echo
+            echo "### What's new"
+            echo
+            awk 'NR == 1 { next } /^\*\* / { exit } { print }' CHANGELOG.txt
+          } >> notes.md
 
           gh release create "$TAG" \
             --title "VoxTool $TAG" \
