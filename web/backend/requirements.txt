@@ -1,0 +1,10 @@
+boto3>=1.34
+flask>=3.0
+flask-cors>=4.0
+gunicorn>=22.0
+nibabel>=5.2
+numpy>=1.26
+
+# Implant-document extraction (local only; see extraction/).
+pymupdf>=1.24
+python-pptx>=1.0

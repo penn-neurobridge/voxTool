@@ -1,0 +1,1444 @@
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-panel: #1e2a45;
+  --bg-input: #0f1625;
+  --text-primary: #e0e0e0;
+  --text-secondary: #8892a4;
+  --accent: #4fc3f7;
+  --accent-hover: #29b6f6;
+  --accent-dim: #1a3a4a;
+  --border: #2a3a5c;
+  --danger: #ef5350;
+  --success: #66bb6a;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+}
+
+/* ── Left sidebar ── */
+.sidebar {
+  width: 340px;
+  min-width: 300px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Main viewer area ── */
+.viewer-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Keep both viewers mounted so annotations persist when switching tabs.
+   display:none would zero the WebGL canvas size; visibility+absolute keeps layout. */
+.viewer-stack {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.viewer-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.viewer-pane-hidden {
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.viewer-pane:not(.viewer-pane-hidden) {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.viewer-top-bar {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.ct-threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ct-threshold-row.cloud-second-row {
+  margin-top: 6px;
+}
+
+.ct-threshold-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ct-threshold-input {
+  width: 88px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ct-threshold-status {
+  font-size: 12px;
+  max-width: 360px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ct-threshold-status-ok {
+  color: #7fd99a;
+}
+
+.ct-threshold-status-err {
+  color: #f07178;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.toolbar-viewer {
+  row-gap: 8px;
+}
+
+.toolbar-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.toolbar-slider,
+.toolbar-clip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar-clip select {
+  width: 88px;
+  padding: 4px 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.btn-compact {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.layout-group {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.layout-group .btn {
+  border: 1px solid transparent;
+  background: transparent;
+  min-width: 32px;
+}
+
+.layout-group .btn.btn-primary {
+  border-color: var(--accent);
+}
+
+.app.sidebar-collapsed .viewer-area {
+  /* sidebar is unmounted, viewer takes the full width automatically */
+}
+
+.toolbar-hint {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.toolbar .threshold-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  min-width: 36px;
+  text-align: right;
+}
+
+.viewer-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.cloud-viewer-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #000;
+}
+
+.cloud-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.cloud-meta {
+  color: var(--text-secondary);
+  flex: 1;
+  line-height: 1.35;
+}
+
+.cloud-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.cloud-exclude-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.cloud-exclude-label input {
+  width: auto;
+}
+
+.cloud-error {
+  padding: 8px 12px;
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef9a9a;
+  font-size: 12px;
+}
+
+.cloud-hint {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 6px 12px;
+  font-size: 11px;
+}
+
+.cloud-controls-hint {
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.cloud-canvas-wrap {
+  flex: 1;
+  min-height: 280px;
+  position: relative;
+}
+
+.cloud-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.voxel-tag {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Single-plane slice navigator. Sits above the canvas as a flex sibling so
+   NiiVue's ResizeObserver shrinks the drawing buffer to match — never overlay
+   it inside .viewer-container, which would desync mouse/scroll coords. */
+.slice-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.slice-strip .slice-step {
+  min-width: 28px;
+  padding: 2px 8px;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.slice-range {
+  flex: 1;
+  min-width: 120px;
+  accent-color: var(--accent);
+}
+
+.slice-readout {
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.slice-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.viewer-container {
+  flex: 1;
+  position: relative;
+  background: #000;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Do NOT force canvas width/height in CSS — NiiVue sizes the drawing
+   buffer itself. Stretching via CSS desyncs mouse/scroll coords from pixels
+   and makes A/C/S feel frozen. */
+.viewer-container canvas {
+  display: block;
+}
+
+/* Only mounted in Pan mode: takes the pointer so a left-drag pans instead of
+   dropping the crosshair. Wheel events are forwarded on to NiiVue. */
+.pan-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+  touch-action: none;
+  z-index: 2;
+}
+
+.pan-overlay:active {
+  cursor: grabbing;
+}
+
+.pan-reset {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  opacity: 0.85;
+}
+
+/* ── Panel sections ── */
+.panel-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-section h3,
+.panel-heading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+
+.panel-section.flex-grow {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-labeling {
+  flex-shrink: 0;
+}
+
+.panel-contacts {
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-workflow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.panel-define-leads {
+  flex-shrink: 0;
+  border-bottom: none;
+}
+
+.panel-define-leads.is-open {
+  border-bottom: 1px solid var(--border);
+}
+
+.define-leads-body {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.define-leads-dims {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.define-leads-dims .field-grow {
+  flex: 1;
+}
+
+.field-tight {
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.field-tight input {
+  width: 100%;
+}
+
+.label-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.field-grow {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.field-index {
+  width: 64px;
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.field-index input {
+  width: 100%;
+}
+
+.lead-meta-line {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 8px 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ras-inline {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.ras-inline strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.snap-status {
+  font-size: 11px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.snap-status-ok {
+  color: var(--success);
+}
+
+.snap-status-wait {
+  color: var(--text-secondary);
+}
+
+.interp-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  background: var(--bg-input);
+  border: 1px solid transparent;
+}
+
+.interp-status > span {
+  flex: 1;
+}
+
+.interp-status-ok {
+  border-color: rgba(80, 200, 120, 0.45);
+  color: var(--success, #6dd58c);
+}
+
+.interp-status-warn {
+  border-color: rgba(255, 180, 0, 0.5);
+  color: #ffc961;
+}
+
+.interp-status-err {
+  border-color: rgba(255, 90, 90, 0.5);
+  color: #ff8a8a;
+}
+
+.interp-status-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.7;
+}
+
+.interp-status-close:hover {
+  opacity: 1;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
+.submit-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-submit-wide {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.btn-wide {
+  width: 100%;
+}
+
+.btn-ghost {
+  background: transparent;
+  border-style: dashed;
+}
+
+.next-hint {
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.lead-chip-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.lead-chip-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.lead-chip-list li:hover {
+  background: var(--accent-dim);
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.btn-icon:hover {
+  color: var(--danger);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+  flex-shrink: 0;
+}
+
+.footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.footer-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.footer-checkbox {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.footer-checkbox input {
+  width: auto;
+}
+
+.footer-scan-name {
+  margin-top: 10px;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-bar-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ras-legend {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+
+.ras-legend-r {
+  color: #ff6b6b;
+}
+
+.ras-legend-a {
+  color: #63c7ff;
+}
+
+.ras-legend-s {
+  color: #7dd87d;
+}
+
+.status-hint {
+  color: var(--text-secondary);
+}
+
+.status-hint kbd {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* Selected state for the segmented controls (tabs, layout, window presets,
+   contacts size). A solid accent chip with black text shouts "press me" and is
+   harsh against a dark panel — but these only say which mode you are already
+   in. Tint them instead, and keep the solid fill for real actions like Submit
+   and Save as…, so the two stop looking identical. */
+.viewer-tabs .btn.btn-primary,
+.layout-group .btn.btn-primary,
+.toolbar-presets .btn.btn-primary,
+.contacts-size-group .btn.btn-primary {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.viewer-tabs .btn.btn-primary:hover,
+.layout-group .btn.btn-primary:hover,
+.toolbar-presets .btn.btn-primary:hover,
+.contacts-size-group .btn.btn-primary:hover {
+  background: #22485c;
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 83, 80, 0.15);
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Inputs ── */
+select,
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 13px;
+  outline: none;
+}
+
+select:focus,
+input:focus {
+  border-color: var(--accent);
+}
+
+.field {
+  margin-bottom: 8px;
+}
+
+.field > label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+/* ── Contact list ── */
+.contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+}
+
+.contact-list-dense li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-list-dense li:last-child {
+  border-bottom: none;
+}
+
+.contact-list-dense li:hover {
+  background: var(--accent-dim);
+  cursor: pointer;
+}
+
+.contact-list-dense li.contact-row-selected {
+  background: var(--accent-dim);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.lead-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+
+.contacts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contacts-header .panel-heading {
+  margin-bottom: 10px;
+}
+
+.contacts-size-group {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.contacts-size-group .btn {
+  min-width: 26px;
+  padding: 2px 6px;
+  line-height: 1.1;
+}
+
+/* The sidebar usually overflows, so there is no spare space for flex-grow to
+   hand out — these sizes have to be stated outright or "tall" does nothing. */
+.panel-contacts.contacts-off {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.panel-contacts.contacts-normal {
+  flex: 1 1 auto;
+  min-height: 240px;
+}
+
+.panel-contacts.contacts-tall {
+  flex: 1 1 auto;
+  min-height: 55vh;
+}
+
+.contact-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.contact-detail-name {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.overwrite-hint {
+  color: #ffc961;
+}
+
+.contact-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.contact-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.contact-indices {
+  font-size: 10px;
+}
+
+.contact-list .coord {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.contact-list-empty {
+  padding: 16px 12px;
+  font-size: 12px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+
+.contact-list .delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.contact-list .delete-btn:hover {
+  color: var(--danger);
+}
+
+/* ── RAS display ── */
+.ras-display {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ras-display .ras-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px;
+  background: var(--bg-input);
+  border-radius: 5px;
+}
+
+.ras-display .ras-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.ras-display .ras-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+  padding: 40px;
+  line-height: 1.6;
+}
+
+/* ── Status bar ── */
+.status-bar {
+  padding: 6px 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* ── File picker modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  min-width: 340px;
+  max-width: 480px;
+}
+
+.modal h2 {
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.modal .scan-list {
+  list-style: none;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.modal .scan-list li {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal .scan-list li:hover {
+  background: var(--accent-dim);
+}
+
+.modal .scan-list li.selected {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+}
+
+.modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ── Implant document import ── */
+.modal-wide {
+  max-width: 900px;
+  width: 90vw;
+}
+
+.import-error {
+  color: #f07178;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.import-warning {
+  font-size: 11px;
+  color: #ffc961;
+  background: rgba(255, 180, 0, 0.08);
+  border-left: 2px solid rgba(255, 180, 0, 0.5);
+  padding: 6px 10px;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.import-summary {
+  font-size: 12px;
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+}
+
+.import-table-wrap {
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.import-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.import-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+/* Flagged rows are the whole point of the review step; make them obvious. */
+.import-row-review {
+  background: rgba(255, 180, 0, 0.06);
+}
+
+/* These inputs carry no type attribute, so the global input[type="text"] rule
+   does not reach them and they would render with the browser's white default. */
+.import-cell {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+
+.import-cell:focus {
+  border-color: var(--accent);
+}
+
+.import-cell-name {
+  width: 80px;
+  font-weight: 600;
+}
+
+.import-cell-num {
+  width: 60px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.import-flag,
+.import-note {
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.import-flag {
+  color: #ffc961;
+}
+
+.import-progress {
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
+/* ── Pennsieve upload ── */
+.pennsieve-dest {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  background: var(--bg-input);
+  border-radius: 6px;
+}
+
+.pennsieve-summary {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 4px 0 10px;
+}
+
+.pennsieve-summary strong {
+  color: var(--accent);
+}
+
+.pennsieve-ok {
+  font-size: 12px;
+  color: #7fd99a;
+  margin: 0 0 10px;
+}
+
+.pennsieve-result {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pennsieve-result th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 4px 10px 4px 0;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.pennsieve-result td {
+  padding: 4px 0;
+  word-break: break-all;
+}
+
+.pennsieve-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  margin: 4px 0 8px;
+  color: var(--text-secondary);
+}
+
+.pennsieve-crumbs button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.pennsieve-crumbs button:disabled {
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.pennsieve-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.pennsieve-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pennsieve-row:last-child {
+  border-bottom: none;
+}
+
+.pennsieve-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pennsieve-row-folder {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.pennsieve-row-folder:hover {
+  background: var(--accent-dim);
+}
+
+.pennsieve-row-other {
+  color: var(--text-secondary);
+}
+
+.pennsieve-row-size {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+/* Links in dialogs: the browser's default blue is unreadable on the panel. */
+.modal a {
+  color: var(--accent);
+}
+
+.modal a:hover {
+  color: var(--accent-hover);
+}
+
+.pennsieve-section {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.pennsieve-section h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text-primary);
+}
+
+.pennsieve-help {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+
+.pennsieve-steps {
+  margin: 4px 0 12px;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.pennsieve-steps strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.pennsieve-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pennsieve-input-row > select,
+.pennsieve-input-row > input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Masks the API secret without type="password", which browsers offer to
+   save and then refill. Chromium and WebKit, which covers Electron. */
+.masked-input {
+  -webkit-text-security: disc;
+}
+
+/* Browser autofill paints inputs white; keep them on the dark panel. */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset;
+  -webkit-text-fill-color: var(--text-primary);
+}
+
+.modal-medium {
+  max-width: 620px;
+  width: 90vw;
+}

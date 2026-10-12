@@ -1,3 +1,45 @@
+** 10/12/2026 : v1.1.0 **
+- Read an implant document (PDF or PowerPoint) into the lead definitions:
+  names and contact counts from the channel map, and anatomical targets with
+  the optional local model (needs Ollama). Everything is shown for review and
+  flagged where the document disagrees with itself before anything is added.
+- Pennsieve (desktop only; needs the Pennsieve agent installed):
+  - Upload finished annotations to a dataset as JSON, TXT in the layout of the
+    lab's electrodes.txt, or both. The folder defaults to
+    derivatives/voxtool_ct and can be typed, pasted as a Pennsieve ID, or
+    picked by browsing. Previews by default; only datasets you can edit are
+    offered.
+  - Open a CT straight from Pennsieve, by browsing or by its ID.
+  - Connect to Pennsieve, switch workspace and remove saved keys from inside
+    VoxTool, without the terminal.
+  - Limit a computer to chosen datasets.
+- Save as .txt writes a depth lead's size as "N 1", matching the lab's
+  electrodes.txt files.
+
+** 7/29/2026 : v1.0.7 **
+- Single-plane Axial/Coronal/Sagittal views now have a slice navigator: slider,
+  prev/next buttons, and a "Axial slice 122 / 242" readout. Up/Down and
+  PageUp/PageDown step slices. Previously the mouse wheel was the only way to
+  move through a single plane and nothing on screen said so, so the view looked
+  frozen.
+- Slices render at the display's native pixel density. They were being drawn at
+  half resolution and upscaled, which is what made them look soft on Retina
+  screens.
+- Annotated contacts are now visible on the 3D volume render. They sit inside
+  the head, so the skull used to draw straight over them.
+- 4-up tiles are padded apart instead of butting together.
+
+** 7/2026 : v1.0.6 **
+- Renamed "Threshold cloud" to "Electrode View".
+- Save coordinates as .json or .txt; loading either restores a session. Fixes
+  "Unexpected end of JSON input" when reloading a saved file.
+- Freer rotation in Electrode View (trackball-style), so reaching a usable
+  angle no longer fights the camera.
+- Contacts picked in Electrode View appear on the slices in matching lead
+  colours, and markers clip to the current slice instead of hovering over every
+  slice at their absolute position.
+- macOS builds are ad-hoc signed so the DMG opens without a broken-app error.
+
 ** 8/12/2021 **
 Bug Fixes
 ---------

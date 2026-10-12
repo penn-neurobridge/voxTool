@@ -1,0 +1,974 @@
+[
+  {
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "leads": [
+      {
+        "name": "lk",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "lk",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -75.1,
+            "A": 167.6,
+            "S": -184.8
+          }
+        }
+      },
+      {
+        "lead": "lk",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -7.7,
+            "A": 171.9,
+            "S": -194.2
+          }
+        }
+      },
+      {
+        "lead": "lk",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -18.2,
+            "A": 170.8,
+            "S": -192.2
+          }
+        }
+      }
+    ],
+    "id": "566f70bf-0d09-4750-a184-ad3172b859f9"
+  },
+  {
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "include_bipolar_pairs": false,
+    "leads": [
+      {
+        "name": "LA",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "LA",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -78.6,
+            "A": 164.2,
+            "S": -184.3
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -40.9,
+            "A": 160,
+            "S": -189.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -3.2,
+            "A": 155.8,
+            "S": -194.1
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 34.5,
+            "A": 151.6,
+            "S": -199
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 72.2,
+            "A": 147.4,
+            "S": -203.9
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 109.9,
+            "A": 143.2,
+            "S": -208.8
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 147.6,
+            "A": 139,
+            "S": -213.7
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 185.3,
+            "A": 134.8,
+            "S": -218.6
+          }
+        }
+      }
+    ],
+    "id": "26afeb9f-8678-48b8-aaec-a1be35fad7b2"
+  },
+  {
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "include_bipolar_pairs": false,
+    "leads": [
+      {
+        "name": "LA",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "LA",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -78.6,
+            "A": 164.2,
+            "S": -184.3
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -40.9,
+            "A": 160,
+            "S": -189.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -3.2,
+            "A": 155.8,
+            "S": -194.1
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 34.5,
+            "A": 151.6,
+            "S": -199
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 72.2,
+            "A": 147.4,
+            "S": -203.9
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 109.9,
+            "A": 143.2,
+            "S": -208.8
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 147.6,
+            "A": 139,
+            "S": -213.7
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 185.3,
+            "A": 134.8,
+            "S": -218.6
+          }
+        }
+      }
+    ],
+    "id": "a3a3e974-e42a-427a-8864-1ee45e7793e9"
+  },
+  {
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "include_bipolar_pairs": false,
+    "leads": [
+      {
+        "name": "LA",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "LA",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -78.9,
+            "A": 164.5,
+            "S": -184.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -30,
+            "A": 160.8,
+            "S": -190.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -72.7,
+            "A": 164.8,
+            "S": -184.9
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -64.9,
+            "A": 163.4,
+            "S": -185.9
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -57.9,
+            "A": 162.9,
+            "S": -186.8
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -51,
+            "A": 162.4,
+            "S": -187.6
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -44,
+            "A": 161.9,
+            "S": -188.5
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -37,
+            "A": 161.3,
+            "S": -189.3
+          }
+        }
+      }
+    ],
+    "id": "63d7ab68-b078-400e-bce5-8ee50564f0bd"
+  },
+  {
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "include_bipolar_pairs": false,
+    "leads": [
+      {
+        "name": "LA",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "LA",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -78.8,
+            "A": 164.5,
+            "S": -184.3
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -19.8,
+            "A": 161.4,
+            "S": -191
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -69.5,
+            "A": 164.3,
+            "S": -184.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -60.4,
+            "A": 164.3,
+            "S": -184.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -52,
+            "A": 163.8,
+            "S": -185.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -43.6,
+            "A": 163.2,
+            "S": -186.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -34.4,
+            "A": 163.2,
+            "S": -186.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -26,
+            "A": 162.7,
+            "S": -187.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -69.5,
+            "A": 164.3,
+            "S": -184.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -60.4,
+            "A": 164.3,
+            "S": -184.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -52,
+            "A": 163.8,
+            "S": -185.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -43.6,
+            "A": 163.2,
+            "S": -186.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -34.4,
+            "A": 163.2,
+            "S": -186.2
+          }
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -26,
+            "A": 162.7,
+            "S": -187.2
+          }
+        }
+      }
+    ],
+    "id": "25512c8d-3c1d-4e63-ba28-840c55ca3e8b"
+  },
+  {
+    "schema_version": 1,
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "include_bipolar_pairs": false,
+    "excluded_voxels": [],
+    "leads": [
+      {
+        "name": "LA",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "LA",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -77.1,
+            "A": 124.9,
+            "S": -169.2
+          },
+          "voxel": [
+            418,
+            181,
+            159
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -18.1,
+            "A": 130.1,
+            "S": -181.2
+          },
+          "voxel": [
+            304,
+            191,
+            147
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -67.5,
+            "A": 124.9,
+            "S": -169.2
+          },
+          "voxel": [
+            399,
+            181,
+            159
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -57.9,
+            "A": 125,
+            "S": -169.3
+          },
+          "voxel": [
+            381,
+            181,
+            159
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -50.3,
+            "A": 126.4,
+            "S": -172.1
+          },
+          "voxel": [
+            366,
+            184,
+            156
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -42.9,
+            "A": 128,
+            "S": -175.2
+          },
+          "voxel": [
+            352,
+            187,
+            153
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -33.3,
+            "A": 128,
+            "S": -175.2
+          },
+          "voxel": [
+            333,
+            187,
+            153
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -25,
+            "A": 128.6,
+            "S": -177.2
+          },
+          "voxel": [
+            317,
+            188,
+            151
+          ]
+        }
+      }
+    ],
+    "id": "05e3e4f4-da48-4c07-8e9b-3a748a1dbad1"
+  },
+  {
+    "schema_version": 1,
+    "scan_id": "example",
+    "scan_filename": "example.nii.gz",
+    "include_bipolar_pairs": false,
+    "excluded_voxels": [],
+    "leads": [
+      {
+        "name": "LA",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      },
+      {
+        "name": "RB",
+        "type": "D",
+        "dimensions": [
+          1,
+          8
+        ]
+      }
+    ],
+    "contacts": [
+      {
+        "lead": "LA",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -77.1,
+            "A": 124.9,
+            "S": -169.2
+          },
+          "voxel": [
+            418,
+            181,
+            159
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -18.1,
+            "A": 130.1,
+            "S": -181.2
+          },
+          "voxel": [
+            304,
+            191,
+            147
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -67.5,
+            "A": 124.9,
+            "S": -169.2
+          },
+          "voxel": [
+            399,
+            181,
+            159
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -57.9,
+            "A": 125,
+            "S": -169.3
+          },
+          "voxel": [
+            381,
+            181,
+            159
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -50.3,
+            "A": 126.4,
+            "S": -172.1
+          },
+          "voxel": [
+            366,
+            184,
+            156
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -42.9,
+            "A": 128,
+            "S": -175.2
+          },
+          "voxel": [
+            352,
+            187,
+            153
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -33.3,
+            "A": 128,
+            "S": -175.2
+          },
+          "voxel": [
+            333,
+            187,
+            153
+          ]
+        }
+      },
+      {
+        "lead": "LA",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": -25,
+            "A": 128.6,
+            "S": -177.2
+          },
+          "voxel": [
+            317,
+            188,
+            151
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "1",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 88,
+            "A": 105.3,
+            "S": -186.2
+          },
+          "voxel": [
+            99,
+            143,
+            142
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "8",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 39.9,
+            "A": 126.5,
+            "S": -179.2
+          },
+          "voxel": [
+            192,
+            184,
+            149
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "2",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 79.6,
+            "A": 105.9,
+            "S": -186.2
+          },
+          "voxel": [
+            115,
+            144,
+            142
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "3",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 73.1,
+            "A": 111,
+            "S": -186.2
+          },
+          "voxel": [
+            128,
+            154,
+            142
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "4",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 66,
+            "A": 114.3,
+            "S": -185.8
+          },
+          "voxel": [
+            142,
+            160,
+            142
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "5",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 59.4,
+            "A": 117.3,
+            "S": -184.2
+          },
+          "voxel": [
+            154,
+            166,
+            144
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "6",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 52.2,
+            "A": 120.4,
+            "S": -184
+          },
+          "voxel": [
+            168,
+            172,
+            144
+          ]
+        }
+      },
+      {
+        "lead": "RB",
+        "label": "7",
+        "coordinate_spaces": {
+          "mm": {
+            "R": 45.7,
+            "A": 123.4,
+            "S": -182.2
+          },
+          "voxel": [
+            181,
+            178,
+            146
+          ]
+        }
+      }
+    ],
+    "id": "2c62db39-fb8c-402d-8452-6b5c0a4c652b"
+  }
+]

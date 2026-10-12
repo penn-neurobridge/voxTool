@@ -1,0 +1,21 @@
+# Desktop build: same processing stack as the cloud API, minus anything that
+# talks to AWS. boto3 is deliberately absent so the offline app cannot reach S3.
+flask>=3.0
+flask-cors>=4.0
+nibabel>=5.2
+numpy>=1.26
+waitress>=3.0
+
+# Implant-document extraction (local only; see extraction/).
+pymupdf>=1.24
+python-pptx>=1.0
+
+# Pennsieve browsing and downloads (local only; see pennsieve_api.py). Only
+# asks the Pennsieve agent for a session token; pennsieve_agent/agent_pb2.py
+# was generated for the protobuf 5.x runtime.
+grpcio>=1.71
+protobuf>=5.29,<6
+# CA certificates for HTTPS to Pennsieve. A frozen app's Python looks for them
+# where the build machine's OpenSSL kept them, which does not exist on the
+# user's machine; certifi's bundle travels inside the app.
+certifi>=2024.2

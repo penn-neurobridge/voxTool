@@ -18,11 +18,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          # Runner labels are pinned, not `macos-latest`, so a GitHub image
+          # rotation cannot silently change what we ship. They do need bumping
+          # when an image retires: macos-13 died 2025-12-04 and macos-14 entered
+          # brownouts 2026-07-06, which is what broke both Mac jobs.
+          - os: macos-15
             label: macOS (Apple Silicon)
             artifact: voxtool-macos-arm64
             builder_args: --mac --arm64
-          - os: macos-13
+          # The last x86_64 macOS runner GitHub offers; retires August 2027.
+          - os: macos-15-intel
             label: macOS (Intel)
             artifact: voxtool-macos-x64
             builder_args: --mac --x64
@@ -68,12 +73,26 @@ jobs:
         working-directory: desktop
         run: node scripts/test-backend-launch.js --packaged
 
+      # The arch below is what actually selects it. Do not add an `arch` list to
+      # the mac target in package.json: naming architectures there pins them, so
+      # --arm64 stops narrowing anything and both Macs build concurrently. Both
+      # DMGs then mount a volume named "VoxTool <version>", the second lands on
+      # "... 1", and the loser dies looking for its background image.
+      # One retry: on the hosted Intel Macs the DMG step now and then fails on a
+      # busy disk image, and the release job refuses to publish unless every
+      # platform built, so one flake would block a release.
       - name: Package application
         working-directory: desktop
+        shell: bash
         env:
           # Unsigned builds: skip electron-builder's notarization path entirely.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npx electron-builder ${{ matrix.builder_args }} --publish never
+        run: |
+          npx electron-builder ${{ matrix.builder_args }} --publish never || {
+            echo "::warning::Packaging failed once; retrying in 20 s."
+            sleep 20
+            npx electron-builder ${{ matrix.builder_args }} --publish never
+          }
 
       - name: Collect installers
         uses: actions/upload-artifact@v4
@@ -86,3 +105,85 @@ jobs:
             desktop/dist/*.zip
             desktop/dist/*.exe
             desktop/dist/*.AppImage
+
+  # Actions artifacts expire and require a GitHub login to download. A release
+  # is public and permanent, so that is what we point people at. Only runs for
+  # v* tags, and only if every platform built — a release missing an installer
+  # is worse than no release.
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download every platform's installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish to the Releases page
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          # This job only downloads artifacts, so there is no checkout and no
+          # git remote for gh to read the repository from. Without this it exits
+          # before reaching the API: "fatal: not a git repository".
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t files < <(find artifacts -type f \
+            \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' \) | sort)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No installers were produced; refusing to publish an empty release." >&2
+            exit 1
+          fi
+
+          printf 'Attaching:\n'
+          printf '  %s\n' "${files[@]}"
+
+          cat > notes.md <<'EOF'
+          VoxTool runs entirely on your own machine. Scans are read in place from
+          your disk and nothing is uploaded anywhere.
+
+          ### Which file do I want?
+
+          | Your computer | Download |
+          | --- | --- |
+          | Windows | the `.exe` installer |
+          | Mac with Apple Silicon (M1/M2/M3/M4) | the `arm64.dmg` |
+          | Mac with an Intel chip | the `.dmg` without `arm64` in the name |
+
+          Not sure which Mac you have? Apple menu > About This Mac.
+
+          ### The builds are not code-signed
+
+          We do not have an Apple or Microsoft signing certificate yet, so each OS
+          will warn you the first time.
+
+          **macOS** — dragging VoxTool to Applications and double-clicking will say
+          the app cannot be checked for malicious software. Instead, right-click the
+          app and choose **Open**, then **Open** again in the dialog. You only do
+          this once.
+
+          On macOS 15 and newer that dialog may have no Open button at all. Dismiss
+          it, then go to **System Settings > Privacy & Security**, scroll to the note
+          about VoxTool being blocked, and click **Open Anyway**.
+
+          **Windows** — SmartScreen shows a blue "Windows protected your PC" screen.
+          Click **More info**, then **Run anyway**.
+
+          ### Prefer to run from source?
+
+          See the "Run from source" section of the README. It does exactly the same
+          things as these installers.
+          EOF
+
+          gh release create "$TAG" \
+            --title "VoxTool $TAG" \
+            --notes-file notes.md \
+            "${files[@]}"
