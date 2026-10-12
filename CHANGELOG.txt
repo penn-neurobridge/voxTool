@@ -1,4 +1,4 @@
-** 10/7/2026 : v1.1.0 (unreleased) **
+** 10/12/2026 : v1.1.0 **
 - Read an implant document (PDF or PowerPoint) into the lead definitions:
   names and contact counts from the channel map, and anatomical targets with
   the optional local model (needs Ollama). Everything is shown for review and
