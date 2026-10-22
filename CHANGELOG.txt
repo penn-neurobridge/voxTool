@@ -1,3 +1,9 @@
+** 10/22/2026 : v1.1.1 **
+- Electrode View no longer shows some scans as a mirror image. Scans stored
+  with left and right reversed (common, and true of the lab's example CTs)
+  were drawn mirrored in 3D, so seen from behind, R sat on the left. The
+  slice views and saved coordinates were always correct.
+
 ** 10/12/2026 : v1.1.0 **
 - Read an implant document (PDF or PowerPoint) into the lead definitions:
   names and contact counts from the channel map, and anatomical targets with
