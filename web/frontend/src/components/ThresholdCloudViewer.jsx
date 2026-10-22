@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js";
 import { leadColorHex } from "../leadColors";
+import { sceneDirection, sceneScale } from "../cloudScene";
 
 const API = process.env.REACT_APP_API_URL || "";
 
@@ -307,6 +308,8 @@ export default function ThresholdCloudViewer({
   const requestRenderRef = useRef(null);
   const activeRef = useRef(active);
   const spacingRef = useRef([1, 1, 1]);
+  // Mirror x for scans stored mirror-image to RAS (see cloudScene.js).
+  const flipXRef = useRef(false);
   const selectedLeadRef = useRef("");
   const onCloudPickRef = useRef(null);
   const scanFilenameRef = useRef(null);
@@ -455,16 +458,19 @@ export default function ThresholdCloudViewer({
         throw new Error(data.error);
       }
       const sp = data.voxel_spacing_mm || [1, 1, 1];
+      const flipX = !!data.flip_x;
       spacingRef.current = sp;
+      flipXRef.current = flipX;
       setMeta({
         returned: data.returned ?? 0,
         total: data.total_voxels ?? 0,
         thr: data.intensity_threshold,
         shape: data.shape,
         spacing: sp,
+        flipX,
       });
       cloudThrRef.current = data.intensity_threshold;
-      rebuildPoints(data.points || [], sp);
+      rebuildPoints(data.points || [], sp, flipX);
       setLoading(false);
     } catch (e) {
       console.error("threshold_cloud:", e);
@@ -514,7 +520,7 @@ export default function ThresholdCloudViewer({
     requestRenderRef.current?.();
   };
 
-  const rebuildPoints = (points, spacing) => {
+  const rebuildPoints = (points, spacing, flipX) => {
     const scene = sceneRef.current;
     if (!scene) return;
     spacingRef.current = spacing || spacingRef.current;
@@ -533,14 +539,15 @@ export default function ThresholdCloudViewer({
     const sx = spacing[0] || 1;
     const sy = spacing[1] || 1;
     const sz = spacing[2] || 1;
+    const [kx, ky, kz] = sceneScale(spacing, flipX);
 
     const positions = new Float32Array(n * 3);
     const pickMap = new Array(n);
     for (let i = 0; i < n; i++) {
       const [vi, vj, vk] = points[i];
-      positions[i * 3] = vi * sx;
-      positions[i * 3 + 1] = vj * sy;
-      positions[i * 3 + 2] = vk * sz;
+      positions[i * 3] = vi * kx;
+      positions[i * 3 + 1] = vj * ky;
+      positions[i * 3 + 2] = vk * kz;
       pickMap[i] = [vi, vj, vk];
     }
     pickIndexToVoxelRef.current = pickMap;
@@ -891,6 +898,7 @@ export default function ThresholdCloudViewer({
     const off = radius * 1.18;
     const labelScale = Math.max(radius * 0.16, 6);
 
+    const flipX = meta?.flipX ?? flipXRef.current;
     const group = new THREE.Group();
     group.name = "orientation-labels";
     const defs = [
@@ -901,8 +909,9 @@ export default function ThresholdCloudViewer({
       ["S", orientation.S, ORIENT_BLUE],
       ["I", orientation.I, ORIENT_BLUE],
     ];
-    for (const [txt, dir, col] of defs) {
-      if (!Array.isArray(dir) || dir.length !== 3) continue;
+    for (const [txt, rawDir, col] of defs) {
+      if (!Array.isArray(rawDir) || rawDir.length !== 3) continue;
+      const dir = sceneDirection(rawDir, flipX);
       const sp = makeTextSprite(txt, col);
       sp.position.set(
         center.x + dir[0] * off,
@@ -935,13 +944,14 @@ export default function ThresholdCloudViewer({
     const sx = spacing[0] || 1;
     const sy = spacing[1] || 1;
     const sz = spacing[2] || 1;
+    const [kx, ky, kz] = sceneScale(spacing, meta?.flipX ?? flipXRef.current);
     const n = componentVoxels.length;
     const positions = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const [vi, vj, vk] = componentVoxels[i];
-      positions[i * 3] = vi * sx;
-      positions[i * 3 + 1] = vj * sy;
-      positions[i * 3 + 2] = vk * sz;
+      positions[i * 3] = vi * kx;
+      positions[i * 3 + 1] = vj * ky;
+      positions[i * 3 + 2] = vk * kz;
     }
 
     const geom = new THREE.BufferGeometry();
@@ -986,6 +996,7 @@ export default function ThresholdCloudViewer({
     const sx = spacing[0] || 1;
     const sy = spacing[1] || 1;
     const sz = spacing[2] || 1;
+    const [kx, ky, kz] = sceneScale(spacing, meta?.flipX ?? flipXRef.current);
     const group = new THREE.Group();
     group.name = "contact-markers";
 
@@ -1021,7 +1032,7 @@ export default function ThresholdCloudViewer({
       if (!local?.voxels?.length) return 0;
       const col = new THREE.Color(colorHex);
       for (const v of local.voxels) {
-        positions.push(v[0] * sx, v[1] * sy, v[2] * sz);
+        positions.push(v[0] * kx, v[1] * ky, v[2] * kz);
         colors.push(col.r, col.g, col.b);
       }
       return local.voxels.length;
@@ -1039,7 +1050,7 @@ export default function ThresholdCloudViewer({
         opacity: 1,
       });
       const mesh = new THREE.Mesh(geom, mat);
-      mesh.position.set(voxel[0] * sx, voxel[1] * sy, voxel[2] * sz);
+      mesh.position.set(voxel[0] * kx, voxel[1] * ky, voxel[2] * kz);
       mesh.renderOrder = 2;
       group.add(mesh);
     };

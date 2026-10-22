@@ -498,6 +498,18 @@ def _voxel_spacing_mm(affine: np.ndarray) -> list:
     ]
 
 
+def _scene_flip_x(affine: np.ndarray) -> bool:
+    """Whether Electrode View must mirror x to show this scan the right way round.
+
+    The cloud draws voxel (i, j, k) at (i*sx, j*sy, k*sz). When the voxel axes are
+    stored mirror-image to RAS (a negative determinant, as in the common LAS
+    layout), that drawing is a mirror image of the head: every label still points
+    the right way, but seen from behind, R lands on the left. Negating x turns the
+    scene back into a rotation of the real anatomy.
+    """
+    return bool(np.linalg.det(affine[:3, :3]) < 0)
+
+
 def _percentile_thr_from_dataobj(dataobj, nz: int, pct: float, seed: int = 0) -> float:
     """Percentile from z-slab samples — never loads the full volume into RAM."""
     target = 2_000_000
@@ -953,6 +965,9 @@ def threshold_cloud(filename):
             points = [points[i] for i in pick]
         payload["points"] = points
         payload["returned"] = len(points)
+        # Read from the header on every request, never from the cache: caches
+        # written before this field existed would otherwise draw mirrored.
+        payload["flip_x"] = _scene_flip_x(_open_scan_dataobj(filepath)[1])
         return jsonify(payload)
 
     # Never block HTTP for minutes building a new threshold — CloudFront dies at ~60s.
@@ -977,6 +992,7 @@ def threshold_cloud(filename):
     payload = _build_threshold_cloud_payload(
         filepath, threshold_pct, max_points=max_points, seed=seed, excluded=excluded
     )
+    payload["flip_x"] = _scene_flip_x(_open_scan_dataobj(filepath)[1])
     return jsonify(payload)
 
 
@@ -1165,6 +1181,10 @@ def orientation(filename):
     voxel spacings (norms of the affine columns). To place R/A/S/L/P/I labels the
     way the desktop tool does, we map each RAS direction into that scaled voxel
     space: scene_from_ras = diag(spacing) @ inv(affine[:3,:3]).
+
+    These directions are before any mirroring. When ``flip_x`` is true (also sent
+    with the cloud), the viewer negates x for the points and these directions
+    alike, so the two always agree.
     """
     data_dir = current_app.config["DATA_DIR"]
     filepath = _scan_filepath(filename)
@@ -1191,6 +1211,7 @@ def orientation(filename):
             "P": dir_for([0, -1, 0]),
             "S": dir_for([0, 0, 1]),
             "I": dir_for([0, 0, -1]),
+            "flip_x": _scene_flip_x(affine),
         }
     )
 
