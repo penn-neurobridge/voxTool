@@ -1,0 +1,513 @@
+{
+ "LENT": {
+  "LENT 1": [
+   "Unknown",
+   "ctx-lh-temporalpole",
+   "ctx-lh-fusiform"
+  ],
+  "LENT 2": [
+   "Unknown",
+   "ctx-lh-temporalpole",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-fusiform"
+  ],
+  "LENT 3": [
+   "Unknown",
+   "ctx-lh-inferiortemporal",
+   "ctx-lh-temporalpole"
+  ],
+  "LENT 4": [
+   "Unknown",
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-temporalpole"
+  ],
+  "LENT 5": [
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LENT 6": [
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-middletemporal"
+  ],
+  "LENT 7": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-middletemporal"
+  ]
+ },
+ "LAMY": {
+  "LAMY 1": [
+   "Left-Amygdala"
+  ],
+  "LAMY 2": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LAMY 3": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LAMY 4": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LAMY 5": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal",
+   "ctx-lh-middletemporal"
+  ],
+  "LAMY 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal",
+   "ctx-lh-middletemporal"
+  ],
+  "LAMY 7": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-middletemporal"
+  ]
+ },
+ "LPHG": {
+  "LPHG 1": [
+   "Left-Hippocampus",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPHG 2": [
+   "Unknown",
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-fusiform"
+  ],
+  "LPHG 3": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPHG 4": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPHG 5": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-middletemporal"
+  ],
+  "LPHG 6": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal",
+   "ctx-lh-middletemporal"
+  ],
+  "LPHG 7": [
+   "Unknown"
+  ]
+ },
+ "LPLI": {
+  "LPLI 1": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula"
+  ],
+  "LPLI 2": [
+   "Unknown",
+   "ctx-lh-insula"
+  ],
+  "LPLI 3": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal"
+  ],
+  "LPLI 4": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPLI 5": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPLI 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal"
+  ],
+  "LPLI 7": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal",
+   "ctx-lh-middletemporal"
+  ],
+  "LPLI 8": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal",
+   "ctx-lh-middletemporal"
+  ],
+  "LPLI 9": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiortemporal",
+   "ctx-lh-middletemporal"
+  ]
+ },
+ "LSTG": {
+  "LSTG 1": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSTG 2": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSTG 3": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSTG 4": [
+   "Left-Cerebral-White-Matter"
+  ]
+ },
+ "LPIT": {
+  "LPIT 1": [
+   "ctx-lh-parahippocampal",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPIT 2": [
+   "Left-Cerebral-White-Matter",
+   "WM-hypointensities"
+  ],
+  "LPIT 3": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-fusiform"
+  ],
+  "LPIT 4": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-fusiform"
+  ],
+  "LPIT 5": [
+   "Unknown",
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-fusiform"
+  ],
+  "LPIT 6": [
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPIT 7": [
+   "ctx-lh-inferiortemporal",
+   "Left-Cerebral-White-Matter"
+  ]
+ },
+ "LTPO": {
+  "LTPO 3": [
+   "ctx-lh-inferiorparietal",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LTPO 4": [
+   "ctx-lh-inferiorparietal",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LTPO 5": [
+   "ctx-lh-inferiorparietal",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LTPO 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-supramarginal"
+  ],
+  "LTPO 7": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LTPO 8": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-supramarginal"
+  ]
+ },
+ "LBRI": {
+  "LBRI 1": [
+   "Left-Cerebral-White-Matter",
+   "Left-Putamen"
+  ],
+  "LBRI 2": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula"
+  ],
+  "LBRI 3": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula"
+  ],
+  "LBRI 4": [
+   "Unknown",
+   "ctx-lh-parsopercularis",
+   "ctx-lh-insula"
+  ],
+  "LBRI 5": [
+   "ctx-lh-parsopercularis",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LBRI 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-parsopercularis"
+  ],
+  "LBRI 7": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LBRI 8": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-parsopercularis"
+  ]
+ },
+ "LACN": {
+  "LACN 1": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-caudalanteriorcingulate"
+  ],
+  "LACN 2": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LACN 3": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LACN 4": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LACN 5": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-rostralmiddlefrontal"
+  ],
+  "LACN 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-rostralmiddlefrontal"
+  ],
+  "LACN 7": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-rostralmiddlefrontal"
+  ],
+  "LACN 8": [
+   "Unknown"
+  ]
+ },
+ "LOFC": {
+  "LOFC 1": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-rostralmiddlefrontal",
+   "ctx-lh-lateralorbitofrontal"
+  ],
+  "LOFC 2": [
+   "Unknown",
+   "ctx-lh-rostralmiddlefrontal",
+   "ctx-lh-lateralorbitofrontal"
+  ],
+  "LOFC 3": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-rostralmiddlefrontal",
+   "ctx-lh-lateralorbitofrontal"
+  ],
+  "LOFC 4": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-parsorbitalis"
+  ],
+  "LOFC 5": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LOFC 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-parstriangularis"
+  ],
+  "LOFC 7": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-parstriangularis"
+  ],
+  "LOFC 8": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-parstriangularis"
+  ],
+  "LOFC 9": [
+   "Unknown"
+  ]
+ },
+ "LPCN": {
+  "LPCN 1": [
+   "Unknown",
+   "ctx-lh-precuneus",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-isthmuscingulate"
+  ],
+  "LPCN 2": [
+   "ctx-lh-precuneus",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPCN 3": [
+   "ctx-lh-precuneus",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPCN 4": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPCN 5": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPCN 6": [
+   "ctx-lh-inferiorparietal",
+   "Unknown",
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPCN 7": [
+   "ctx-lh-inferiorparietal",
+   "Left-Cerebral-White-Matter",
+   "WM-hypointensities"
+  ]
+ },
+ "LSMA": {
+  "LSMA 1": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula"
+  ],
+  "LSMA 2": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula",
+   "WM-hypointensities"
+  ],
+  "LSMA 3": [
+   "Left-Cerebral-White-Matter",
+   "WM-hypointensities"
+  ],
+  "LSMA 4": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 5": [
+   "Left-Cerebral-White-Matter",
+   "Left-Putamen"
+  ],
+  "LSMA 6": [
+   "Left-Cerebral-White-Matter",
+   "Left-Putamen"
+  ],
+  "LSMA 7": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula",
+   "Left-Putamen"
+  ],
+  "LSMA 8": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-insula"
+  ],
+  "LSMA 9": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 10": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 11": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 12": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 13": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 14": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LSMA 15": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiorfrontal"
+  ],
+  "LSMA 16": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-superiorfrontal"
+  ]
+ },
+ "LPM": {
+  "LPM 1": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPM 2": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPM 3": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPM 5": [
+   "Left-Cerebral-White-Matter"
+  ],
+  "LPM 6": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-caudalmiddlefrontal"
+  ],
+  "LPM 7": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-caudalmiddlefrontal"
+  ],
+  "LPM 8": [
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-caudalmiddlefrontal"
+  ],
+  "LPM 9": [
+   "Left-Cerebral-White-Matter",
+   "WM-hypointensities"
+  ],
+  "LPM 10": [
+   "Unknown",
+   "Left-Cerebral-White-Matter",
+   "ctx-lh-caudalmiddlefrontal"
+  ]
+ },
+ "RAHP": {
+  "RAHP 1": [
+   "Unknown",
+   "Right-Hippocampus"
+  ],
+  "RAHP 2": [
+   "Right-Hippocampus"
+  ],
+  "RAHP 3": [
+   "Right-Hippocampus"
+  ],
+  "RAHP 4": [
+   "Right-Hippocampus"
+  ],
+  "RAHP 5": [
+   "Right-Cerebral-White-Matter",
+   "ctx-rh-inferiortemporal",
+   "Right-Hippocampus"
+  ],
+  "RAHP 6": [
+   "Right-Cerebral-White-Matter",
+   "ctx-rh-inferiortemporal"
+  ],
+  "RAHP 7": [
+   "Unknown",
+   "ctx-rh-inferiortemporal"
+  ],
+  "RAHP 8": [
+   "Right-Cerebral-White-Matter",
+   "ctx-rh-inferiortemporal",
+   "ctx-rh-middletemporal"
+  ]
+ },
+ "RPHP": {
+  "RPHP 1": [
+   "ctx-rh-parahippocampal"
+  ],
+  "RPHP 2": [
+   "ctx-rh-parahippocampal",
+   "Right-Cerebral-White-Matter"
+  ],
+  "RPHP 3": [
+   "Right-Cerebral-White-Matter",
+   "WM-hypointensities"
+  ],
+  "RPHP 4": [
+   "Unknown",
+   "Right-Cerebral-White-Matter",
+   "ctx-rh-fusiform"
+  ],
+  "RPHP 5": [
+   "Right-Cerebral-White-Matter"
+  ],
+  "RPHP 6": [
+   "Right-Cerebral-White-Matter"
+  ],
+  "RPHP 8": [
+   "Unknown",
+   "Right-Cerebral-White-Matter",
+   "ctx-rh-inferiortemporal"
+  ]
+ }
+}

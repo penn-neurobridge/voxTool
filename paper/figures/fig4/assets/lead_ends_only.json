@@ -1,0 +1,151 @@
+{
+ "leads": {
+  "LENT": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": []
+  },
+  "LAMY": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": []
+  },
+  "LPHG": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": []
+  },
+  "LPLI": {
+   "type": "D",
+   "dimensions": [
+    1,
+    9
+   ],
+   "contacts": []
+  },
+  "LSTG": {
+   "type": "D",
+   "dimensions": [
+    1,
+    4
+   ],
+   "contacts": []
+  },
+  "LPIT": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": []
+  },
+  "LTPO": {
+   "type": "D",
+   "dimensions": [
+    1,
+    6
+   ],
+   "contacts": []
+  },
+  "LBRI": {
+   "type": "D",
+   "dimensions": [
+    1,
+    8
+   ],
+   "contacts": []
+  },
+  "LACN": {
+   "type": "D",
+   "dimensions": [
+    1,
+    8
+   ],
+   "contacts": []
+  },
+  "LOFC": {
+   "type": "D",
+   "dimensions": [
+    1,
+    9
+   ],
+   "contacts": []
+  },
+  "LPCN": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": []
+  },
+  "LSMA": {
+   "type": "D",
+   "dimensions": [
+    1,
+    16
+   ],
+   "contacts": []
+  },
+  "LPM": {
+   "type": "D",
+   "dimensions": [
+    1,
+    9
+   ],
+   "contacts": []
+  },
+  "RAHP": {
+   "type": "D",
+   "dimensions": [
+    1,
+    8
+   ],
+   "contacts": [
+    {
+     "name": "RAHP1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        276,
+        257,
+        62
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        193,
+        279,
+        52
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "RPHP": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": []
+  }
+ }
+}

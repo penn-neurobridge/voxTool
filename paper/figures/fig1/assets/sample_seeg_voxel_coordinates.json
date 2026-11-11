@@ -1,0 +1,1686 @@
+{
+ "leads": {
+  "LENT": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": [
+    {
+     "name": "LENT1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        383,
+        321,
+        48
+       ]
+      }
+     }
+    },
+    {
+     "name": "LENT2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        386,
+        322,
+        49
+       ]
+      }
+     }
+    },
+    {
+     "name": "LENT3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        394,
+        325,
+        52
+       ]
+      }
+     }
+    },
+    {
+     "name": "LENT4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        401,
+        328,
+        56
+       ]
+      }
+     }
+    },
+    {
+     "name": "LENT5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        406,
+        330,
+        58
+       ]
+      }
+     }
+    },
+    {
+     "name": "LENT6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        412,
+        332,
+        61
+       ]
+      }
+     }
+    },
+    {
+     "name": "LENT7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        418,
+        333,
+        64
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LAMY": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": [
+    {
+     "name": "LAMY1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        387,
+        274,
+        75
+       ]
+      }
+     }
+    },
+    {
+     "name": "LAMY2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        398,
+        276,
+        76
+       ]
+      }
+     }
+    },
+    {
+     "name": "LAMY3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        410,
+        278,
+        77
+       ]
+      }
+     }
+    },
+    {
+     "name": "LAMY4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        423,
+        280,
+        78
+       ]
+      }
+     }
+    },
+    {
+     "name": "LAMY5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        436,
+        281,
+        79
+       ]
+      }
+     }
+    },
+    {
+     "name": "LAMY6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        449,
+        283,
+        80
+       ]
+      }
+     }
+    },
+    {
+     "name": "LAMY7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        462,
+        284,
+        81
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LPHG": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": [
+    {
+     "name": "LPHG1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        403,
+        239,
+        71
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPHG2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        418,
+        233,
+        72
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPHG3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        434,
+        227,
+        73
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPHG4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        450,
+        220,
+        75
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPHG5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        464,
+        213,
+        79
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPHG6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        478,
+        208,
+        83
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPHG7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        490,
+        203,
+        86
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LPLI": {
+   "type": "D",
+   "dimensions": [
+    1,
+    9
+   ],
+   "contacts": [
+    {
+     "name": "LPLI1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        405,
+        270,
+        84
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        410,
+        269,
+        85
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        420,
+        268,
+        86
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        428,
+        266,
+        86
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        436,
+        265,
+        87
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        445,
+        263,
+        88
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        453,
+        262,
+        88
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        461,
+        261,
+        89
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPLI9",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        469,
+        259,
+        90
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LSTG": {
+   "type": "D",
+   "dimensions": [
+    1,
+    4
+   ],
+   "contacts": [
+    {
+     "name": "LSTG1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        405,
+        190,
+        82
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSTG2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        409,
+        190,
+        83
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSTG3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        417,
+        190,
+        85
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSTG4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        425,
+        190,
+        87
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LPIT": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": [
+    {
+     "name": "LPIT1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        383,
+        201,
+        68
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPIT2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        393,
+        198,
+        69
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPIT3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        406,
+        194,
+        70
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPIT4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        418,
+        190,
+        70
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPIT5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        431,
+        186,
+        71
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPIT6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        443,
+        182,
+        72
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPIT7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        456,
+        178,
+        73
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LTPO": {
+   "type": "D",
+   "dimensions": [
+    1,
+    6
+   ],
+   "contacts": [
+    {
+     "name": "LTPO3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        408,
+        150,
+        103
+       ]
+      }
+     }
+    },
+    {
+     "name": "LTPO4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        416,
+        147,
+        104
+       ]
+      }
+     }
+    },
+    {
+     "name": "LTPO5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        421,
+        145,
+        104
+       ]
+      }
+     }
+    },
+    {
+     "name": "LTPO6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        431,
+        142,
+        104
+       ]
+      }
+     }
+    },
+    {
+     "name": "LTPO7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        439,
+        139,
+        105
+       ]
+      }
+     }
+    },
+    {
+     "name": "LTPO8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        447,
+        136,
+        105
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LBRI": {
+   "type": "D",
+   "dimensions": [
+    1,
+    8
+   ],
+   "contacts": [
+    {
+     "name": "LBRI1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        378,
+        301,
+        106
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        383,
+        301,
+        107
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        392,
+        301,
+        109
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        400,
+        301,
+        110
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        409,
+        301,
+        111
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        416,
+        301,
+        113
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        425,
+        300,
+        114
+       ]
+      }
+     }
+    },
+    {
+     "name": "LBRI8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        431,
+        300,
+        115
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LACN": {
+   "type": "D",
+   "dimensions": [
+    1,
+    8
+   ],
+   "contacts": [
+    {
+     "name": "LACN1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        325,
+        284,
+        125
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        338,
+        287,
+        128
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        354,
+        292,
+        132
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        369,
+        296,
+        135
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        385,
+        300,
+        138
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        400,
+        305,
+        141
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        416,
+        309,
+        144
+       ]
+      }
+     }
+    },
+    {
+     "name": "LACN8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        438,
+        315,
+        148
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LOFC": {
+   "type": "D",
+   "dimensions": [
+    1,
+    9
+   ],
+   "contacts": [
+    {
+     "name": "LOFC1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        360,
+        409,
+        107
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        370,
+        400,
+        109
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        383,
+        390,
+        110
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        395,
+        379,
+        112
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        406,
+        367,
+        115
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        415,
+        355,
+        119
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        424,
+        343,
+        124
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        433,
+        332,
+        129
+       ]
+      }
+     }
+    },
+    {
+     "name": "LOFC9",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        442,
+        322,
+        133
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LPCN": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": [
+    {
+     "name": "LPCN1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        341,
+        155,
+        93
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPCN2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        354,
+        147,
+        93
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPCN3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        369,
+        138,
+        93
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPCN4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        384,
+        129,
+        94
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPCN5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        397,
+        120,
+        94
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPCN6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        413,
+        111,
+        94
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPCN7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        427,
+        102,
+        95
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LSMA": {
+   "type": "D",
+   "dimensions": [
+    1,
+    16
+   ],
+   "contacts": [
+    {
+     "name": "LSMA1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        395,
+        291,
+        89
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        395,
+        291,
+        89
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        392,
+        290,
+        93
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        386,
+        288,
+        100
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        384,
+        288,
+        102
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        382,
+        287,
+        104
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        379,
+        287,
+        108
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        376,
+        286,
+        112
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA9",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        350,
+        278,
+        147
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA10",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        349,
+        277,
+        149
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA11",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        345,
+        276,
+        154
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA12",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        342,
+        275,
+        157
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA13",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        340,
+        274,
+        160
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA14",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        337,
+        273,
+        164
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA15",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        332,
+        272,
+        170
+       ]
+      }
+     }
+    },
+    {
+     "name": "LSMA16",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        331,
+        271,
+        172
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "LPM": {
+   "type": "D",
+   "dimensions": [
+    1,
+    9
+   ],
+   "contacts": [
+    {
+     "name": "LPM1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        376,
+        240,
+        131
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        379,
+        240,
+        134
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        384,
+        241,
+        138
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        391,
+        242,
+        144
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        397,
+        242,
+        150
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        403,
+        243,
+        156
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        405,
+        243,
+        157
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM9",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        408,
+        243,
+        160
+       ]
+      }
+     }
+    },
+    {
+     "name": "LPM10",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        409,
+        243,
+        161
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "RAHP": {
+   "type": "D",
+   "dimensions": [
+    1,
+    8
+   ],
+   "contacts": [
+    {
+     "name": "RAHP1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        276,
+        257,
+        62
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        266,
+        260,
+        61
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        254,
+        263,
+        59
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        242,
+        267,
+        58
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        230,
+        270,
+        56
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        217,
+        273,
+        55
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP7",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        205,
+        276,
+        53
+       ]
+      }
+     }
+    },
+    {
+     "name": "RAHP8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        193,
+        279,
+        52
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "RPHP": {
+   "type": "D",
+   "dimensions": [
+    1,
+    7
+   ],
+   "contacts": [
+    {
+     "name": "RPHP1",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        280,
+        211,
+        65
+       ]
+      }
+     }
+    },
+    {
+     "name": "RPHP2",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        264,
+        211,
+        65
+       ]
+      }
+     }
+    },
+    {
+     "name": "RPHP3",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        247,
+        210,
+        65
+       ]
+      }
+     }
+    },
+    {
+     "name": "RPHP4",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        230,
+        210,
+        65
+       ]
+      }
+     }
+    },
+    {
+     "name": "RPHP5",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        212,
+        209,
+        65
+       ]
+      }
+     }
+    },
+    {
+     "name": "RPHP6",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        195,
+        208,
+        65
+       ]
+      }
+     }
+    },
+    {
+     "name": "RPHP8",
+     "lead_group": 0,
+     "coordinate_spaces": {
+      "ct_voxel": {
+       "raw": [
+        159,
+        206,
+        64
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

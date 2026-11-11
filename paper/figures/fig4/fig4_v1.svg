@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2000" height="1190" viewBox="0 0 2000 1190">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1b2233"/></marker></defs>
+<rect width="2000" height="1190" fill="white"/>
+<circle cx="57" cy="54" r="17" fill="#1b2233"/><text x="57" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">1</text><text x="84" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Read the implant plan</text>
+<clipPath id="clip-plan"><rect x="40" y="90" width="600" height="373.3333333333333" rx="12"/></clipPath><image href="assets/crops/plan_read.png" xlink:href="assets/crops/plan_read.png" x="40" y="90" width="600" height="373.3333333333333" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-plan)"/>
+<text x="40" y="495.3333333333333" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">The local model fills in each lead's name, contacts and target.</text>
+<text x="40" y="519.3333333333333" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Gaps in the channel map are flagged to check (yellow).</text>
+<line x1="650" y1="280" x2="700" y2="280" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<circle cx="737" cy="54" r="17" fill="#1b2233"/><text x="737" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">2</text><text x="764" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Mark the two end contacts</text>
+<clipPath id="clip-ends"><rect x="720" y="90" width="620" height="177.86885245901638" rx="12"/></clipPath><image href="assets/crops/ends.png" xlink:href="assets/crops/ends.png" x="720" y="90" width="620" height="177.86885245901638" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-ends)"/>
+<text x="720" y="295.86885245901635" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">RAHP1 and RAHP8 placed (blue); the 6 between are still unlabeled.</text>
+<circle cx="737" cy="351.86885245901635" r="17" fill="#1b2233"/><text x="737" y="357.86885245901635" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">3</text><text x="764" y="357.86885245901635" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Interpolate</text>
+<clipPath id="clip-filled"><rect x="720" y="387.86885245901635" width="620" height="177.86885245901638" rx="12"/></clipPath><image href="assets/crops/filled.png" xlink:href="assets/crops/filled.png" x="720" y="387.86885245901635" width="620" height="177.86885245901638" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-filled)"/>
+<image href="assets/crops/interp_status.png" xlink:href="assets/crops/interp_status.png" x="720" y="581.7377049180327" width="380" height="69.36507936507937" preserveAspectRatio="xMidYMid meet"/>
+<text x="1120" y="615.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Each filled point is</text>
+<text x="1120" y="637.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">snapped to the metal.</text>
+<line x1="1360" y1="280" x2="1470" y2="280" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<circle cx="1507" cy="54" r="17" fill="#1b2233"/><text x="1507" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">4</text><text x="1534" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Save</text>
+<rect x="1490" y="90" width="470" height="300" rx="12" fill="#f3f5f8"/>
+<text x="1510" y="125" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">voxel_coordinates.txt</text>
+<text x="1510" y="160" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP1  276  257  62  D  8 1</text>
+<text x="1510" y="190" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP2  266  260  61  D  8 1</text>
+<text x="1510" y="220" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP3  254  263  59  D  8 1</text>
+<text x="1510" y="250" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP4  242  267  58  D  8 1</text>
+<text x="1510" y="280" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP5  230  270  56  D  8 1</text>
+<text x="1510" y="310" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP6  217  273  55  D  8 1</text>
+<text x="1510" y="340" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP7  205  276  53  D  8 1</text>
+<text x="1510" y="370" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP8  193  279  52  D  8 1</text>
+<text x="1490" y="420" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">name · i · j · k · type · dimensions</text>
+<text x="1490" y="442" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Voxel coordinates, also as JSON.</text>
+<rect x="40" y="700" width="1920" height="430" rx="18" fill="#f3f5f8"/>
+<text x="70" y="750" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">How a click snaps to a contact</text>
+<clipPath id="clip-snap"><rect x="70" y="775" width="340" height="340" rx="8"/></clipPath><image href="assets/crops/snap_inset.png" xlink:href="assets/crops/snap_inset.png" x="70" y="775" width="340" height="340" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-snap)"/>
+<text x="460" y="830" font-family="Menlo, Courier New, monospace" font-size="26" fill="#1b2233">c<tspan baseline-shift="sub" font-size="18">t+1</tspan> = mean { x : I(x) ≥ T, |x − c<tspan baseline-shift="sub" font-size="18">t</tspan>| ≤ r }</text>
+<text x="460" y="880" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">Start at the click c₀ (×). Average every bright voxel within r of it; move there; repeat.</text>
+<text x="460" y="910" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">It is a local mean on the bright voxels, not k-means: each click converges to the contact under it.</text>
+<text x="460" y="970" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Defaults</text>
+<text x="460" y="998" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">T = 99.96th percentile of the CT (3,071 HU here)</text>
+<text x="460" y="1024" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">r = 3 mm  ·  2 iterations for a click</text>
+<text x="460" y="1080" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="#0ea5e9" text-anchor="start">This example</text>
+<text x="460" y="1108" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">click at (239, 270, 58)  ·  averages 30, then 41 bright voxels  ·  lands on (242, 267, 58), contact RAHP4</text>
+<rect x="1420" y="800" width="500" height="150" rx="12" fill="white"/>
+<line x1="1450" y1="840" x2="1490" y2="840" stroke="#0ea5e9" stroke-width="3" stroke-dasharray="7 5"/>
+<text x="1505" y="846" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">search radius r around the click</text>
+<rect x="1452" y="872" width="34" height="18" fill="#e4572e" opacity="0.55"/>
+<text x="1505" y="886" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">voxels at or above T (this slice)</text>
+<circle cx="1470" cy="920" r="8" fill="#0ea5e9" stroke="white" stroke-width="2"/>
+<text x="1505" y="926" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">where the click lands</text>
+<text x="40" y="1168" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG CT (public, BSD-3); example plan made from its lead list. Screenshots: VoxTool 1.1.1. Inset: VoxTool's snap replayed on the CT.</text>
+</svg>

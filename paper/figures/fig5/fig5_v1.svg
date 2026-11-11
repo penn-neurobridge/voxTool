@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2000" height="980" viewBox="0 0 2000 980">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1b2233"/></marker></defs>
+<rect width="2000" height="980" fill="white"/>
+<circle cx="57" cy="54" r="17" fill="#1b2233"/><text x="57" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">1</text><text x="84" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">VoxTool output</text>
+<rect x="40" y="90" width="420" height="250" rx="12" fill="#f3f5f8"/>
+<text x="60" y="125" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">voxel_coordinates.txt</text>
+<text x="60" y="160" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP1  276  257  62  D  8 1</text>
+<text x="60" y="190" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP2  266  260  61  D  8 1</text>
+<text x="60" y="220" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP3  254  263  59  D  8 1</text>
+<text x="60" y="250" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP4  242  267  58  D  8 1</text>
+<text x="60" y="280" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">RAHP5  230  270  56  D  8 1</text>
+<text x="60" y="310" font-family="Menlo, Courier New, monospace" font-size="17" fill="#1b2233" xml:space="preserve">…</text>
+<text x="40" y="370" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">CT voxel coordinates for every contact</text>
+<rect x="40" y="430" width="420" height="90" rx="12" fill="white" stroke="#c8ced8" stroke-width="2"/>
+<text x="60" y="468" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">+ pre-implant MRI</text>
+<text x="60" y="496" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">(T1-weighted, same patient)</text>
+<line x1="470" y1="300" x2="535" y2="300" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<circle cx="567" cy="54" r="17" fill="#1b2233"/><text x="567" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">2</text><text x="594" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Downstream pipeline</text>
+<rect x="550" y="90" width="520" height="430" rx="18" fill="#1b2233"/>
+<text x="810.0" y="150" font-family="Helvetica, Arial, sans-serif" font-size="32" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">iEEG-recon</text>
+<text x="810.0" y="182" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#aab4c8" text-anchor="middle">or MNE-Python, FieldTrip, …</text>
+<rect x="580" y="220" width="460" height="120" rx="12" fill="#26314a"/>
+<text x="600" y="258" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" font-style="normal" fill="white" text-anchor="start">Module 2 · register</text>
+<text x="600" y="288" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#d5dceb" text-anchor="start">align the CT to the MRI; move every</text>
+<text x="600" y="312" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#d5dceb" text-anchor="start">contact from CT to MRI space</text>
+<rect x="580" y="360" width="460" height="130" rx="12" fill="#26314a"/>
+<text x="600" y="398" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" font-style="normal" fill="white" text-anchor="start">Module 3 · label</text>
+<text x="600" y="428" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#d5dceb" text-anchor="start">assign each contact to an atlas</text>
+<text x="600" y="452" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#d5dceb" text-anchor="start">region (DKT or any FreeSurfer atlas);</text>
+<text x="600" y="476" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#d5dceb" text-anchor="start">optional MNI template space</text>
+<text x="550" y="554" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Module 1 of iEEG-recon is VoxTool itself.</text>
+<line x1="1080" y1="300" x2="1145" y2="300" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<circle cx="1177" cy="54" r="17" fill="#1b2233"/><text x="1177" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">3</text><text x="1204" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Outputs</text>
+<clipPath id="clip-mri"><rect x="1160" y="90" width="360" height="326.6666666666667" rx="12"/></clipPath><image href="assets/crops/ct_on_mri.png" xlink:href="assets/crops/ct_on_mri.png" x="1160" y="90" width="360" height="326.6666666666667" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-mri)"/>
+<text x="1174" y="120" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" font-style="normal" fill="white" text-anchor="start">R</text>
+<text x="1506" y="120" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" font-style="normal" fill="white" text-anchor="end">L</text>
+<text x="1160" y="444.6666666666667" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">CT metal (orange) on the MRI</text>
+<text x="1550" y="115" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#5b6475" text-anchor="start">Contact</text>
+<text x="1670" y="115" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" font-style="normal" fill="#5b6475" text-anchor="start">Atlas region</text>
+<line x1="1550" y1="124" x2="1960" y2="124" stroke="#e5e7eb"/>
+<text x="1550" y="150" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">LAMY1</text>
+<text x="1670" y="150" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">L Amygdala</text>
+<line x1="1550" y1="160" x2="1960" y2="160" stroke="#e5e7eb"/>
+<text x="1550" y="186" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">LPHG1</text>
+<text x="1670" y="186" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">L Hippocampus</text>
+<line x1="1550" y1="196" x2="1960" y2="196" stroke="#e5e7eb"/>
+<text x="1550" y="222" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">RAHP1</text>
+<text x="1670" y="222" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">R Hippocampus</text>
+<line x1="1550" y1="232" x2="1960" y2="232" stroke="#e5e7eb"/>
+<text x="1550" y="258" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">RPHP1</text>
+<text x="1670" y="258" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">R parahippocampal</text>
+<line x1="1550" y1="268" x2="1960" y2="268" stroke="#e5e7eb"/>
+<text x="1550" y="294" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">LBRI1</text>
+<text x="1670" y="294" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">L Putamen</text>
+<line x1="1550" y1="304" x2="1960" y2="304" stroke="#e5e7eb"/>
+<text x="1550" y="330" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">LACN1</text>
+<text x="1670" y="330" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">L caudalanteriorcingulate</text>
+<text x="1550" y="366" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">deepest contact of each lead; FreeSurfer aparc+aseg</text>
+<image href="assets/crops/brain.png" xlink:href="assets/crops/brain.png" x="1240" y="486.6666666666667" width="520" height="385.59199555308504" preserveAspectRatio="xMidYMid meet"/>
+<text x="1500.0" y="900.2586622197517" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">every contact, inside a see-through brain</text>
+<text x="40" y="958" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG subject (public, BSD-3). Outputs computed with MNE-Python (rigid CT-to-MRI registration; FreeSurfer aparc+aseg), standing in for iEEG-recon Modules 2 and 3.</text>
+</svg>

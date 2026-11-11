@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2000" height="1330" viewBox="0 0 2000 1330">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1b2233"/></marker></defs>
+<rect width="2000" height="1330" fill="white"/>
+<g id="panel-a-voxel">
+<circle cx="57" cy="54" r="17" fill="#1b2233"/><text x="57" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">A</text><text x="84" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Voxel coordinates: what VoxTool saves</text>
+<clipPath id="clip-axial"><rect x="40" y="95" width="380" height="380" rx="12"/></clipPath><image href="assets/crops/axial_slice.png" xlink:href="assets/crops/axial_slice.png" x="40" y="95" width="380" height="380" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-axial)"/>
+<text x="230" y="505" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">axial slice k = 52</text>
+<line x1="430" y1="285" x2="470" y2="285" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<image href="assets/crops/voxel_zoom.png" xlink:href="assets/crops/voxel_zoom.png" x="480" y="85" width="410" height="410" preserveAspectRatio="xMidYMid meet"/>
+<text x="1000" y="140" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Contact LENT 3</text>
+<text x="1000" y="190" font-family="Menlo, Courier New, monospace" font-size="30" font-weight="bold" fill="#e4572e">(i, j, k) = (394, 325, 52)</text>
+<text x="1000" y="228" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">whole-number indices into the CT array</text>
+<text x="1000" y="254" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">one voxel = 0.415 × 0.415 × 0.833 mm</text>
+</g>
+<g id="affine">
+<rect x="1000" y="300" width="940" height="190" rx="14" fill="#f3f5f8"/>
+<text x="1024" y="340" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">From voxels to millimetres: the affine in the file header</text>
+<text x="1024" y="395" font-family="Menlo, Courier New, monospace" font-size="24" fill="#1b2233">[R, A, S, 1] = affine · [i, j, k, 1]</text>
+<text x="1024" y="448" font-family="Menlo, Courier New, monospace" font-size="24" fill="#1b2233">(394, 325, 52)  →  <tspan fill="#0ea5e9" font-weight="bold">(-163.5, -77.2, -115.8) mm</tspan></text>
+<text x="1024" y="476" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">R = right, A = anterior, S = superior (scanner space)</text>
+</g>
+<g id="panel-b-mm">
+<circle cx="57" cy="564" r="17" fill="#1b2233"/><text x="57" y="570" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">B</text><text x="84" y="570" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Millimetre coordinates: Electrode View at rising thresholds</text>
+<clipPath id="clip-cloud-0"><rect x="40" y="600" width="590" height="590.0" rx="12"/></clipPath><image href="assets/crops/cloud_p90.png" xlink:href="assets/crops/cloud_p90.png" x="40" y="600" width="590" height="590.0" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-cloud-0)"/>
+<text x="335.0" y="1226.0" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="middle">≥ 90th percentile  ·  ≥ 596 HU</text>
+<text x="335.0" y="1252.0" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">whole skull  ·  5,178,644 voxels</text>
+<line x1="634" y1="895.0" x2="661" y2="895.0" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<clipPath id="clip-cloud-1"><rect x="665" y="600" width="590" height="590.0" rx="12"/></clipPath><image href="assets/crops/cloud_p98.png" xlink:href="assets/crops/cloud_p98.png" x="665" y="600" width="590" height="590.0" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-cloud-1)"/>
+<text x="960.0" y="1226.0" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="middle">≥ 98th percentile  ·  ≥ 1,918 HU</text>
+<text x="960.0" y="1252.0" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">dense bone  ·  942,956 voxels</text>
+<line x1="1259" y1="895.0" x2="1286" y2="895.0" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
+<clipPath id="clip-cloud-2"><rect x="1290" y="600" width="590" height="590.0" rx="12"/></clipPath><image href="assets/crops/cloud_p99.96.png" xlink:href="assets/crops/cloud_p99.96.png" x="1290" y="600" width="590" height="590.0" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-cloud-2)"/>
+<text x="1585.0" y="1226.0" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="middle">≥ 99.96th percentile  ·  ≥ 3,071 HU</text>
+<text x="1585.0" y="1252.0" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">electrodes and teeth  ·  25,558 voxels</text>
+</g>
+<text x="40" y="1308" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG CT (public, BSD-3). Panel B: VoxTool 1.1.1 Electrode View; at most 120,000 points are drawn.</text>
+</svg>

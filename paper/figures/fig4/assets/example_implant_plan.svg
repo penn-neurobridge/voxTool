@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="816" height="1056" viewBox="0 0 816 1056">
+<rect width="816" height="1056" fill="white"/>
+<text x="60" y="70" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="#111" text-anchor="start">Stereo-EEG implant plan</text>
+<text x="60" y="96" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#555" text-anchor="start">Example made for the VoxTool tutorial from the public MNE sample_seeg subject.</text>
+<text x="60" y="114" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#555" text-anchor="start">Not a clinical document. Targets = atlas region at each lead's deepest contact.</text>
+<text x="60" y="160" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#111" text-anchor="start">Lead</text>
+<text x="170" y="160" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#111" text-anchor="start">Contacts</text>
+<text x="270" y="160" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" fill="#111" text-anchor="start">Target</text>
+<line x1="60" y1="168" x2="756" y2="168" stroke="#999"/>
+<text x="60" y="186" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LENT</text>
+<text x="170" y="186" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">7</text>
+<text x="270" y="186" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L temporalpole</text>
+<line x1="60" y1="194" x2="756" y2="194" stroke="#e5e5e5"/>
+<text x="60" y="212" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LAMY</text>
+<text x="170" y="212" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">7</text>
+<text x="270" y="212" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L Amygdala</text>
+<line x1="60" y1="220" x2="756" y2="220" stroke="#e5e5e5"/>
+<text x="60" y="238" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LPHG</text>
+<text x="170" y="238" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">7</text>
+<text x="270" y="238" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L Hippocampus</text>
+<line x1="60" y1="246" x2="756" y2="246" stroke="#e5e5e5"/>
+<text x="60" y="264" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LPLI</text>
+<text x="170" y="264" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">9</text>
+<text x="270" y="264" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L insula</text>
+<line x1="60" y1="272" x2="756" y2="272" stroke="#e5e5e5"/>
+<text x="60" y="290" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LSTG</text>
+<text x="170" y="290" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">4</text>
+<text x="270" y="290" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">white matter</text>
+<line x1="60" y1="298" x2="756" y2="298" stroke="#e5e5e5"/>
+<text x="60" y="316" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LPIT</text>
+<text x="170" y="316" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">7</text>
+<text x="270" y="316" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L parahippocampal</text>
+<line x1="60" y1="324" x2="756" y2="324" stroke="#e5e5e5"/>
+<text x="60" y="342" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LTPO</text>
+<text x="170" y="342" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">6</text>
+<text x="270" y="342" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L inferiorparietal</text>
+<line x1="60" y1="350" x2="756" y2="350" stroke="#e5e5e5"/>
+<text x="60" y="368" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LBRI</text>
+<text x="170" y="368" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">8</text>
+<text x="270" y="368" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L Putamen</text>
+<line x1="60" y1="376" x2="756" y2="376" stroke="#e5e5e5"/>
+<text x="60" y="394" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LACN</text>
+<text x="170" y="394" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">8</text>
+<text x="270" y="394" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L caudalanteriorcingulate</text>
+<line x1="60" y1="402" x2="756" y2="402" stroke="#e5e5e5"/>
+<text x="60" y="420" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LOFC</text>
+<text x="170" y="420" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">9</text>
+<text x="270" y="420" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L rostralmiddlefrontal</text>
+<line x1="60" y1="428" x2="756" y2="428" stroke="#e5e5e5"/>
+<text x="60" y="446" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LPCN</text>
+<text x="170" y="446" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">7</text>
+<text x="270" y="446" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L precuneus</text>
+<line x1="60" y1="454" x2="756" y2="454" stroke="#e5e5e5"/>
+<text x="60" y="472" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LSMA</text>
+<text x="170" y="472" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">16</text>
+<text x="270" y="472" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">L insula</text>
+<line x1="60" y1="480" x2="756" y2="480" stroke="#e5e5e5"/>
+<text x="60" y="498" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">LPM</text>
+<text x="170" y="498" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">9</text>
+<text x="270" y="498" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">white matter</text>
+<line x1="60" y1="506" x2="756" y2="506" stroke="#e5e5e5"/>
+<text x="60" y="524" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">RAHP</text>
+<text x="170" y="524" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">8</text>
+<text x="270" y="524" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">R Hippocampus</text>
+<line x1="60" y1="532" x2="756" y2="532" stroke="#e5e5e5"/>
+<text x="60" y="550" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">RPHP</text>
+<text x="170" y="550" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">7</text>
+<text x="270" y="550" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#111" text-anchor="start">R parahippocampal</text>
+<line x1="60" y1="558" x2="756" y2="558" stroke="#e5e5e5"/>
+<text x="60" y="610" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#111" text-anchor="start">Amplifier channel map</text>
+<text x="60" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT1</text>
+<text x="130" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT2</text>
+<text x="200" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT3</text>
+<text x="270" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT4</text>
+<text x="340" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT5</text>
+<text x="410" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT6</text>
+<text x="480" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LENT7</text>
+<text x="550" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY1</text>
+<text x="620" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY2</text>
+<text x="690" y="640" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY3</text>
+<text x="60" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY4</text>
+<text x="130" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY5</text>
+<text x="200" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY6</text>
+<text x="270" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LAMY7</text>
+<text x="340" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG1</text>
+<text x="410" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG2</text>
+<text x="480" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG3</text>
+<text x="550" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG4</text>
+<text x="620" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG5</text>
+<text x="690" y="660" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG6</text>
+<text x="60" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPHG7</text>
+<text x="130" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI1</text>
+<text x="200" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI2</text>
+<text x="270" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI3</text>
+<text x="340" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI4</text>
+<text x="410" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI5</text>
+<text x="480" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI6</text>
+<text x="550" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI7</text>
+<text x="620" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI8</text>
+<text x="690" y="680" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPLI9</text>
+<text x="60" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSTG1</text>
+<text x="130" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSTG2</text>
+<text x="200" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSTG3</text>
+<text x="270" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSTG4</text>
+<text x="340" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT1</text>
+<text x="410" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT2</text>
+<text x="480" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT3</text>
+<text x="550" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT4</text>
+<text x="620" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT5</text>
+<text x="690" y="700" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT6</text>
+<text x="60" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPIT7</text>
+<text x="130" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LTPO3</text>
+<text x="200" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LTPO4</text>
+<text x="270" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LTPO5</text>
+<text x="340" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LTPO6</text>
+<text x="410" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LTPO7</text>
+<text x="480" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LTPO8</text>
+<text x="550" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI1</text>
+<text x="620" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI2</text>
+<text x="690" y="720" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI3</text>
+<text x="60" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI4</text>
+<text x="130" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI5</text>
+<text x="200" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI6</text>
+<text x="270" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI7</text>
+<text x="340" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LBRI8</text>
+<text x="410" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN1</text>
+<text x="480" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN2</text>
+<text x="550" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN3</text>
+<text x="620" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN4</text>
+<text x="690" y="740" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN5</text>
+<text x="60" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN6</text>
+<text x="130" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN7</text>
+<text x="200" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LACN8</text>
+<text x="270" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC1</text>
+<text x="340" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC2</text>
+<text x="410" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC3</text>
+<text x="480" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC4</text>
+<text x="550" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC5</text>
+<text x="620" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC6</text>
+<text x="690" y="760" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC7</text>
+<text x="60" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC8</text>
+<text x="130" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LOFC9</text>
+<text x="200" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN1</text>
+<text x="270" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN2</text>
+<text x="340" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN3</text>
+<text x="410" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN4</text>
+<text x="480" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN5</text>
+<text x="550" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN6</text>
+<text x="620" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPCN7</text>
+<text x="690" y="780" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA1</text>
+<text x="60" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA2</text>
+<text x="130" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA3</text>
+<text x="200" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA4</text>
+<text x="270" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA5</text>
+<text x="340" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA6</text>
+<text x="410" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA7</text>
+<text x="480" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA8</text>
+<text x="550" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA9</text>
+<text x="620" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA10</text>
+<text x="690" y="800" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA11</text>
+<text x="60" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA12</text>
+<text x="130" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA13</text>
+<text x="200" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA14</text>
+<text x="270" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA15</text>
+<text x="340" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LSMA16</text>
+<text x="410" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM1</text>
+<text x="480" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM2</text>
+<text x="550" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM3</text>
+<text x="620" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM5</text>
+<text x="690" y="820" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM6</text>
+<text x="60" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM7</text>
+<text x="130" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM8</text>
+<text x="200" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM9</text>
+<text x="270" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">LPM10</text>
+<text x="340" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP1</text>
+<text x="410" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP2</text>
+<text x="480" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP3</text>
+<text x="550" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP4</text>
+<text x="620" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP5</text>
+<text x="690" y="840" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP6</text>
+<text x="60" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP7</text>
+<text x="130" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RAHP8</text>
+<text x="200" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP1</text>
+<text x="270" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP2</text>
+<text x="340" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP3</text>
+<text x="410" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP4</text>
+<text x="480" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP5</text>
+<text x="550" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP6</text>
+<text x="620" y="860" font-family="Menlo, Courier New, monospace" font-size="11" font-weight="normal" fill="#111" text-anchor="start">RPHP8</text>
+</svg>
