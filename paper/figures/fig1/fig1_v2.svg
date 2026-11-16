@@ -3,14 +3,10 @@
 <rect width="2000" height="960" fill="white"/>
 <g id="panel-1-implant">
 <circle cx="57" cy="54" r="17" fill="#1b2233"/><text x="57" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">1</text><text x="84" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Implant</text>
-<rect x="40" y="90" width="330" height="600" rx="14" fill="url(#hatch)" stroke="#9aa3b2" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="205.0" y="338.0" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="middle">Illustration</text>
-<text x="205.0" y="364.0" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">open craniotomy:</text>
-<text x="205.0" y="390.0" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">ECoG grid on cortex,</text>
-<text x="205.0" y="416.0" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">sEEG depth leads</text>
-<text x="205.0" y="442.0" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">(BioRender / CC-licensed)</text>
-<text x="40" y="725" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Leads are implanted, then</text>
-<text x="40" y="748" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">the patient gets a CT.</text>
+<image href="private/muki_implant_draft.png" xlink:href="private/muki_implant_draft.png" x="30" y="267.5" width="350" height="245.0" preserveAspectRatio="xMidYMid meet"/>
+<text x="40" y="552.5" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Leads are implanted, then</text>
+<text x="40" y="575.5" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">the patient gets a CT.</text>
+<text x="40" y="607.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Draft art: Muki Gill (BioRender)</text>
 </g>
 <line x1="380" y1="390" x2="415" y2="390" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
 <g id="panel-2-inputs">

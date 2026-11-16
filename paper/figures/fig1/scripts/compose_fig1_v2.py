@@ -26,6 +26,25 @@ def logo_card(x, y, w, h, inner):
             f'stroke="#d5dbe4" stroke-width="2"/>' + inner)
 
 
+ILLUSTRATION = FIG / "private" / "muki_implant_draft.png"  # BioRender free tier: no licence yet, so git-ignored
+
+
+def implant_art():
+    """Muki's draft illustration when it is on this machine, otherwise the placeholder."""
+    if not ILLUSTRATION.exists():
+        return [placeholder(40, 90, 330, 600, ["Illustration", "open craniotomy:",
+                                               "ECoG grid on cortex,", "sEEG depth leads",
+                                               "(BioRender / CC-licensed)"]),
+                text(40, 725, "Leads are implanted, then", size=17, fill=MUTED),
+                text(40, 748, "the patient gets a CT.", size=17, fill=MUTED)]
+    w, h = 350, 350 * 504 / 720
+    y = 390 - h / 2
+    return [image("private/muki_implant_draft.png", 30, y, w, h, preserve="xMidYMid meet"),
+            text(40, y + h + 40, "Leads are implanted, then", size=17, fill=MUTED),
+            text(40, y + h + 63, "the patient gets a CT.", size=17, fill=MUTED),
+            text(40, y + h + 95, "Draft art: Muki Gill (BioRender)", size=13, fill=MUTED, italic=True)]
+
+
 def build():
     c = make_crops()
     W, H = 2000, 960
@@ -50,10 +69,7 @@ def build():
     parts += [
         '<g id="panel-1-implant">',
         heading(40, 60, 1, "Implant"),
-        placeholder(40, 90, 330, 600, ["Illustration", "open craniotomy:", "ECoG grid on cortex,",
-                                       "sEEG depth leads", "(BioRender / CC-licensed)"]),
-        text(40, 725, "Leads are implanted, then", size=17, fill=MUTED),
-        text(40, 748, "the patient gets a CT.", size=17, fill=MUTED),
+        *implant_art(),
         '</g>',
         arrow(380, 390, 415, 390),
     ]
