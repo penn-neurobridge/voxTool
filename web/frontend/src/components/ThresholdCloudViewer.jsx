@@ -258,6 +258,33 @@ function selectDisplayedContact(pickMap, seedIndex, spacing, radiusMm = PICK_BAL
   return { voxels, centroid_voxel, count: voxels.length };
 }
 
+/**
+ * The displayed bright voxels that make up the contact at `voxel`: seed at the
+ * nearest cloud point, then grow the same local blob a live pick would.
+ * Empty when there is no cloud yet.
+ */
+function contactBlobVoxels(pickMap, voxel, spacing, radiusMm = PICK_BALL_MM) {
+  if (!pickMap?.length || !voxel || voxel.length !== 3) return [];
+  let seedIndex = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < pickMap.length; i++) {
+    const v = pickMap[i];
+    const d = (v[0] - voxel[0]) ** 2 + (v[1] - voxel[1]) ** 2 + (v[2] - voxel[2]) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      seedIndex = i;
+    }
+  }
+  const local = selectDisplayedContact(pickMap, seedIndex, spacing, radiusMm, 2);
+  return local?.voxels || [];
+}
+
+/** A press that moves further than this before release is a drag, not a pick. */
+const CLICK_SLOP_PX = 5;
+
+/** Contact chosen in the sidebar list — yellow, unused by any lead colour. */
+const SELECTED_COLOR = 0xffee32;
+
 /** Live pick highlight color — saturated magenta, matching the legacy `spring` tint. */
 const PICK_COLOR = 0xff1f7a;
 
@@ -295,6 +322,7 @@ export default function ThresholdCloudViewer({
   leads,
   pendingContact,
   selectedLead,
+  selectedContact = null,
   active = true,
 }) {
   const wrapRef = useRef(null);
@@ -662,7 +690,19 @@ export default function ThresholdCloudViewer({
       return bestIx;
     };
 
+    // The browser fires "click" at the end of every drag too (TrackballControls
+    // captures the pointer, so press and release land on the canvas). Without
+    // this, each rotate or pan also picked whatever contact sat under the cursor
+    // on release. A real click moves a few pixels at most.
+    const downAt = { x: 0, y: 0 };
+    const onPointerDown = (e) => {
+      downAt.x = e.clientX;
+      downAt.y = e.clientY;
+    };
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+
     const onCanvasClick = (e) => {
+      if (Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > CLICK_SLOP_PX) return;
       const ptsObj = pointsRef.current;
       const pickMap = pickIndexToVoxelRef.current;
       if (!ptsObj || !pickMap) return;
@@ -779,6 +819,7 @@ export default function ThresholdCloudViewer({
       ro.disconnect();
       if (pickAbortRef.current) pickAbortRef.current.abort();
       renderer.domElement.removeEventListener("click", onCanvasClick);
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       controls.removeEventListener("change", requestRender);
       requestRenderRef.current = null;
       cancelAnimationFrame(animationRef.current);
@@ -1008,34 +1049,13 @@ export default function ThresholdCloudViewer({
 
     // Color only the local connected contact cluster (same logic as live pick).
     const colorBlobFromCloud = (voxel, colorHex, positions, colors) => {
-      if (!pickMap || !voxel || voxel.length !== 3) return 0;
-      let seedIndex = 0;
-      let bestD = Infinity;
-      for (let i = 0; i < pickMap.length; i++) {
-        const v = pickMap[i];
-        const d =
-          (v[0] - voxel[0]) ** 2 +
-          (v[1] - voxel[1]) ** 2 +
-          (v[2] - voxel[2]) ** 2;
-        if (d < bestD) {
-          bestD = d;
-          seedIndex = i;
-        }
-      }
-      const local = selectDisplayedContact(
-        pickMap,
-        seedIndex,
-        [sx, sy, sz],
-        radiusMm,
-        2
-      );
-      if (!local?.voxels?.length) return 0;
+      const blob = contactBlobVoxels(pickMap, voxel, [sx, sy, sz], radiusMm);
       const col = new THREE.Color(colorHex);
-      for (const v of local.voxels) {
+      for (const v of blob) {
         positions.push(v[0] * kx, v[1] * ky, v[2] * kz);
         colors.push(col.r, col.g, col.b);
       }
-      return local.voxels.length;
+      return blob.length;
     };
 
     // Fallback solid marker when a contact has no nearby cloud voxels (e.g. an
@@ -1096,6 +1116,73 @@ export default function ThresholdCloudViewer({
     // Live pending pick is drawn by component-highlight (same density as cloud).
     scene.add(group);
   }, [contacts, pendingContact, selectedLead, leads, meta]);
+
+  // The contact chosen in the sidebar list: its blob in yellow, inside a ring,
+  // both drawn over everything so it can be found even behind other leads.
+  // Looked up by lead + label in `contacts`, so a re-submitted contact shows
+  // where it is now, and a deleted one shows nothing.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const old = scene.getObjectByName("selected-contact");
+    if (old) {
+      old.children.forEach((ch) => {
+        ch.geometry?.dispose();
+        ch.material?.dispose();
+      });
+      scene.remove(old);
+    }
+    if (!selectedContact) return;
+    const c = (contacts || []).find(
+      (x) =>
+        x.lead === selectedContact.lead && String(x.label) === String(selectedContact.label)
+    );
+    if (!c?.voxel || c.voxel.length !== 3) return;
+
+    const spacing = meta?.spacing || spacingRef.current || [1, 1, 1];
+    const [kx, ky, kz] = sceneScale(spacing, meta?.flipX ?? flipXRef.current);
+    const step = Math.max(spacing[0] || 1, spacing[1] || 1, spacing[2] || 1);
+    const group = new THREE.Group();
+    group.name = "selected-contact";
+
+    const blob = contactBlobVoxels(pickIndexToVoxelRef.current, c.voxel, spacing);
+    const pts = blob.length ? blob : [c.voxel];
+    const positions = new Float32Array(pts.length * 3);
+    pts.forEach((v, i) => {
+      positions[i * 3] = v[0] * kx;
+      positions[i * 3 + 1] = v[1] * ky;
+      positions[i * 3 + 2] = v[2] * kz;
+    });
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const dots = new THREE.Points(
+      geom,
+      new THREE.PointsMaterial({
+        color: SELECTED_COLOR,
+        size: step * 2.4,
+        sizeAttenuation: true,
+        transparent: true,
+        depthTest: false,
+      })
+    );
+    dots.renderOrder = 5;
+    group.add(dots);
+
+    const ring = new THREE.Mesh(
+      new THREE.SphereGeometry(4, 16, 12),
+      new THREE.MeshBasicMaterial({
+        color: SELECTED_COLOR,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.55,
+        depthTest: false,
+      })
+    );
+    ring.position.set(c.voxel[0] * kx, c.voxel[1] * ky, c.voxel[2] * kz);
+    ring.renderOrder = 5;
+    group.add(ring);
+    scene.add(group);
+  }, [selectedContact, contacts, meta]);
 
   // Declared last, and deliberately without a dependency array: every effect
   // above that rebuilds scene contents has already run by this point, so one

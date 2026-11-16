@@ -185,20 +185,32 @@ export default function NiiVueViewer({
     pendingRef.current = pendingContact;
   }, [pendingContact]);
 
+  /**
+   * Swap marker meshes without NiiVue's addMesh/removeMesh. Those call
+   * updateGLVolume, which re-uploads the whole CT to the GPU (~0.3 s for a
+   * 512×512×192 scan) — and markers rebuild on every pick, so each click and
+   * each accidental drag-pick froze the app. The only mesh-related work
+   * updateGLVolume does is widen furthestVertexFromOrigin, and contacts sit
+   * inside the head, so the volume's extent already covers them.
+   */
+  const detachMesh = (nv, mesh) => {
+    const i = nv.meshes.indexOf(mesh);
+    if (i >= 0) nv.meshes.splice(i, 1);
+    try {
+      mesh.unloadMesh(nv.gl);
+    } catch (e) {}
+  };
+
   const rebuildMarkers = () => {
     const nv = nvRef.current;
     if (!nv || !volumeReadyRef.current || !nv.volumes?.length) return;
 
     if (markerMeshRef.current) {
-      try {
-        nv.removeMesh(markerMeshRef.current);
-      } catch (e) {}
+      detachMesh(nv, markerMeshRef.current);
       markerMeshRef.current = null;
     }
     if (previewMeshRef.current) {
-      try {
-        nv.removeMesh(previewMeshRef.current);
-      } catch (e) {}
+      detachMesh(nv, previewMeshRef.current);
       previewMeshRef.current = null;
     }
 
@@ -208,7 +220,7 @@ export default function NiiVueViewer({
       try {
         const mesh = nv.loadConnectomeAsMesh(buildContactsConnectome(cts, lds));
         mesh.colorbarVisible = false;
-        nv.addMesh(mesh);
+        nv.meshes.push(mesh);
         markerMeshRef.current = mesh;
       } catch (err) {
         console.warn("contact mesh build failed", err);
@@ -222,7 +234,7 @@ export default function NiiVueViewer({
           buildPreviewConnectome(pending.coord, pending.label)
         );
         mesh.colorbarVisible = false;
-        nv.addMesh(mesh);
+        nv.meshes.push(mesh);
         previewMeshRef.current = mesh;
       } catch (err) {
         console.warn("preview mesh build failed", err);

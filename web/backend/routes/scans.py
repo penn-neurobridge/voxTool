@@ -1278,7 +1278,8 @@ def interpolate_contacts(filename):
       labels?: [int, ...],          # interior labels; default low+1 .. high-1
       threshold_pct?: 99.96,
       lead_type?: "D"|"G"|"S",
-      radius_mm?: float             # overrides lead_type default
+      radius_mm?: float,            # overrides lead_type default
+      known_contacts?: [{label, voxel}]  # contacts of this lead already marked
     }
     """
     data_dir = current_app.config["DATA_DIR"]
@@ -1341,6 +1342,7 @@ def interpolate_contacts(filename):
         threshold_pct=threshold_pct,
         radius_mm=radius_mm,
         existing_voxels=existing,
+        known_contacts=body.get("known_contacts") or [],
     )
     if not result.get("success"):
         return jsonify(result), 400
