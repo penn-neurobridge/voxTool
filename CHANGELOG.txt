@@ -1,3 +1,17 @@
+** 11/16/2026 : v1.1.2 **
+- Clicking a contact in the contact list now highlights it in Electrode View
+  (yellow, inside a ring that shows through other leads), so you can check a
+  contact, or an interpolated lead, contact by contact.
+- Interpolate follows bent leads. It steps along the lead from both marked
+  ends instead of along a straight line, so each filled contact lands on its
+  own contact. Before, on a bent lead several could land on the same contact
+  or on nothing, yet all were listed. A contact it cannot place is now named
+  in the message for you to click by hand; contacts you have already marked
+  in the middle guide the fill.
+- Electrode View no longer freezes while you turn it. Ending a drag also
+  picked a contact, and every pick briefly locked the app; now dragging only
+  moves the view, and picking a contact no longer causes a pause.
+
 ** 10/22/2026 : v1.1.1 **
 - Electrode View no longer shows some scans as a mirror image. Scans stored
   with left and right reversed (common, and true of the lab's example CTs)
