@@ -1179,6 +1179,7 @@ export default function App() {
     const newOnes = [];
     let snappedCount = 0;
     let interpFailMsg = null;
+    let unplaced = [];
     try {
       if (span >= 2) {
         const body = {
@@ -1188,6 +1189,10 @@ export default function App() {
           threshold_pct: thresholdPct,
           lead_type: lead.type,
           existing_voxels: existingVoxels,
+          // Marked contacts between the ends guide the fill along a bent lead.
+          known_contacts: leadContacts
+            .filter((c) => c.voxel?.length === 3)
+            .map((c) => ({ label: c.n, voxel: c.voxel })),
         };
         if (low.voxel?.length === 3 && high.voxel?.length === 3) {
           body.start_voxel = low.voxel;
@@ -1204,6 +1209,7 @@ export default function App() {
         });
         const data = await res.json();
         if (data.success && Array.isArray(data.interior)) {
+          unplaced = (data.skipped || []).map((x) => Number(x.label)).filter((n) => !Number.isNaN(n));
           for (const item of data.interior) {
             if (!item.mm || item.mm.length !== 3) continue;
             if (item.snapped) snappedCount++;
@@ -1276,17 +1282,30 @@ export default function App() {
         }
       }
 
+      // Say plainly which contacts were not placed: the fill skips any contact
+      // it cannot put on metal of its own, rather than listing a coordinate
+      // that Electrode View would never highlight.
+      const missing = unplaced.length
+        ? ` Could not place ${selectedLead} ${unplaced.join(", ")} on a contact of ` +
+          `${unplaced.length === 1 ? "its" : "their"} own: click ${
+            unplaced.length === 1 ? "it" : "them"
+          } by hand, or mark one and interpolate again.`
+        : "";
       if (newOnes.length > 0) {
         setContacts((prev) => [...prev, ...newOnes]);
         setInterpStatus({
-          tone: "ok",
+          tone: unplaced.length ? "warn" : "ok",
           text:
-            `Filled ${newOnes.length} contact${newOnes.length === 1 ? "" : "s"} ` +
-            `along straight line (legacy snap, ${leadRadiusMm} mm radius, ` +
-            `${snappedCount} snapped to bright voxels).`,
+            span >= 2
+              ? `Filled ${newOnes.length} of ${newOnes.length + unplaced.length} contacts ` +
+                `on ${selectedLead}, each on its own bright contact.${missing}`
+              : `Filled ${newOnes.length} contact${newOnes.length === 1 ? "" : "s"} ` +
+                `along the 1→2 step (${snappedCount} snapped to bright voxels).`,
         });
       } else if (interpFailMsg) {
         setInterpStatus({ tone: "err", text: interpFailMsg });
+      } else if (unplaced.length) {
+        setInterpStatus({ tone: "err", text: `No contacts filled.${missing}` });
       }
     } finally {
       setInterpolating(false);
@@ -1430,6 +1449,7 @@ export default function App() {
                 leads={leads}
                 pendingContact={pendingContact}
                 selectedLead={selectedLead}
+                selectedContact={selectedContact}
                 active={viewerTab === "cloud"}
               />
             </div>
