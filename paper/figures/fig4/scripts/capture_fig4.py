@@ -87,6 +87,8 @@ def main():
         page.get_by_role("button", name="Interpolate").click()
         page.wait_for_timeout(8000)
         page.screenshot(path=OUT / "step3_interpolated.png")
+        # The status message by itself: its size depends on what it says.
+        page.locator(".interp-status").screenshot(path=OUT / "step3_status.png")
 
         # 4 · Save as TXT.
         with page.expect_download() as dl:

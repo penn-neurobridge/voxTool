@@ -11,9 +11,10 @@
 <text x="720" y="295.86885245901635" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">RAHP1 and RAHP8 placed (blue); the 6 between are still unlabeled.</text>
 <circle cx="737" cy="351.86885245901635" r="17" fill="#1b2233"/><text x="737" y="357.86885245901635" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">3</text><text x="764" y="357.86885245901635" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Interpolate</text>
 <clipPath id="clip-filled"><rect x="720" y="387.86885245901635" width="620" height="177.86885245901638" rx="12"/></clipPath><image href="assets/crops/filled.png" xlink:href="assets/crops/filled.png" x="720" y="387.86885245901635" width="620" height="177.86885245901638" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-filled)"/>
-<image href="assets/crops/interp_status.png" xlink:href="assets/crops/interp_status.png" x="720" y="581.7377049180327" width="380" height="69.36507936507937" preserveAspectRatio="xMidYMid meet"/>
-<text x="1120" y="615.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Each filled point is</text>
-<text x="1120" y="637.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">snapped to the metal.</text>
+<image href="assets/crops/interp_status.png" xlink:href="assets/crops/interp_status.png" x="720" y="581.7377049180327" width="380" height="59.413680781758956" preserveAspectRatio="xMidYMid meet"/>
+<text x="1120" y="605.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">Steps along the lead from</text>
+<text x="1120" y="627.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">both ends; each contact</text>
+<text x="1120" y="649.7377049180327" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">snaps to its own metal.</text>
 <line x1="1360" y1="280" x2="1470" y2="280" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
 <circle cx="1507" cy="54" r="17" fill="#1b2233"/><text x="1507" y="60" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="white" text-anchor="middle">4</text><text x="1534" y="60" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Save</text>
 <rect x="1490" y="90" width="470" height="300" rx="12" fill="#f3f5f8"/>
@@ -46,5 +47,5 @@
 <text x="1505" y="886" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">voxels at or above T (this slice)</text>
 <circle cx="1470" cy="920" r="8" fill="#0ea5e9" stroke="white" stroke-width="2"/>
 <text x="1505" y="926" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#1b2233" text-anchor="start">where the click lands</text>
-<text x="40" y="1168" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG CT (public, BSD-3); example plan made from its lead list. Screenshots: VoxTool 1.1.1. Inset: VoxTool's snap replayed on the CT.</text>
+<text x="40" y="1168" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG CT (public, BSD-3); example plan made from its lead list. Screenshots: VoxTool 1.1.2. Inset: VoxTool's snap replayed on the CT.</text>
 </svg>

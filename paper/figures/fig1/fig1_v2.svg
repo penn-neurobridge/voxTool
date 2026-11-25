@@ -68,5 +68,5 @@
 <line x1="1650" y1="591.4396887159533" x2="1690" y2="591.4396887159533" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
 <text x="1700" y="597.4396887159533" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">iEEG-recon, MNE, …</text>
 </g>
-<text x="40" y="930" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Example data: MNE-Python sample sEEG subject (public, BSD-3), labeled in VoxTool 1.1.1.</text>
+<text x="40" y="930" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Example data: MNE-Python sample sEEG subject (public, BSD-3), labeled in VoxTool 1.1.2.</text>
 </svg>

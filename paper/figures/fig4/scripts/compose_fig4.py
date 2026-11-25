@@ -36,7 +36,7 @@ def build():
         "plan": crop(s / "step1_plan_read.png", (0, 0, 1800, 1120), "plan_read.png"),
         "ends": crop(s / "step2_ends.png", lead_box, "ends.png"),
         "filled": crop(s / "step3_interpolated.png", lead_box, "filled.png"),
-        "status": crop(s / "step3_interpolated.png", (25, 1080, 655, 1195), "interp_status.png"),
+        "status": crop(s / "step3_status.png", None, "interp_status.png"),
         "snap": crop(A / "renders" / "snap_inset.png", None, "snap_inset.png"),
     }
     snap = json.loads((A / "renders" / "snap_example.json").read_text())
@@ -80,8 +80,9 @@ def build():
         heading(x2, y3, 3, "Interpolate"),
         image(c["filled"][0], x2, y3 + 30, sw, sh, rx=12, clip_id="clip-filled"),
         image(c["status"][0], x2, y3 + 30 + sh + 16, stw, sth, preserve="xMidYMid meet"),
-        text(x2 + stw + 20, y3 + 30 + sh + 50, "Each filled point is", size=16, fill=MUTED),
-        text(x2 + stw + 20, y3 + 30 + sh + 72, "snapped to the metal.", size=16, fill=MUTED),
+        text(x2 + stw + 20, y3 + 30 + sh + 40, "Steps along the lead from", size=16, fill=MUTED),
+        text(x2 + stw + 20, y3 + 30 + sh + 62, "both ends; each contact", size=16, fill=MUTED),
+        text(x2 + stw + 20, y3 + 30 + sh + 84, "snaps to its own metal.", size=16, fill=MUTED),
     ]
 
     # 4 · Save.
@@ -134,7 +135,7 @@ def build():
         f'<circle cx="1470" cy="{top + 220}" r="8" fill="{ACCENT}" stroke="white" stroke-width="2"/>',
         text(1505, top + 226, "where the click lands", size=16),
         text(40, H - 22, "Data: MNE-Python sample sEEG CT (public, BSD-3); example plan made from "
-             "its lead list. Screenshots: VoxTool 1.1.1. Inset: VoxTool's snap replayed on the CT.",
+             "its lead list. Screenshots: VoxTool 1.1.2. Inset: VoxTool's snap replayed on the CT.",
              size=14, fill=MUTED, italic=True),
         '</svg>',
     ]

@@ -118,7 +118,7 @@ def build():
             parts.append(arrow(x + cw + 4, top + ch / 2, x + cw + 31, top + ch / 2))
     parts += [
         '</g>',
-        text(40, H - 22, "Data: MNE-Python sample sEEG CT (public, BSD-3). Panel B: VoxTool 1.1.1 "
+        text(40, H - 22, "Data: MNE-Python sample sEEG CT (public, BSD-3). Panel B: VoxTool 1.1.2 "
              "Electrode View; at most 120,000 points are drawn.", size=14, fill=MUTED, italic=True),
         '</svg>',
     ]

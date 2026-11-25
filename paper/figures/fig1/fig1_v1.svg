@@ -93,6 +93,6 @@
 <line x1="1300" y1="995" x2="1400" y2="995" stroke="#1b2233" stroke-width="4" marker-end="url(#arrow)"/>
 <text x="1420" y="985" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="start">Downstream</text>
 <text x="1420" y="1012" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="start">iEEG-recon · MNE · other pipelines</text>
-<text x="60" y="1130" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Example data: MNE-Python sample sEEG subject (public, BSD-3). Screenshots: VoxTool 1.1.1.</text>
+<text x="60" y="1130" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Example data: MNE-Python sample sEEG subject (public, BSD-3). Screenshots: VoxTool 1.1.2.</text>
 </g>
 </svg>

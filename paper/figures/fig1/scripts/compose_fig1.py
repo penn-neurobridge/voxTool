@@ -189,7 +189,7 @@ def build():
         arrow(770, 400, 815, 400),
     ]
 
-    # 3 · VoxTool: real screenshots of v1.1.1 on the public sample CT.
+    # 3 · VoxTool: real screenshots of v1.1.2 on the public sample CT.
     vx, vy, vw, vh = 830, 90, 700, 560
     sw, sh = c["slices"][1]
     parts += [
@@ -257,7 +257,7 @@ def build():
         text(1420, by + 85, "Downstream", size=20, weight="bold"),
         text(1420, by + 112, "iEEG-recon · MNE · other pipelines", size=16, fill=MUTED),
         text(60, by + 230, "Example data: MNE-Python sample sEEG subject (public, BSD-3). "
-             "Screenshots: VoxTool 1.1.1.", size=14, fill=MUTED, italic=True),
+             "Screenshots: VoxTool 1.1.2.", size=14, fill=MUTED, italic=True),
         '</g>',
         '</svg>',
     ]

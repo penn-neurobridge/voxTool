@@ -33,5 +33,5 @@
 <text x="1585.0" y="1226.0" font-family="Helvetica, Arial, sans-serif" font-size="19" font-weight="bold" font-style="normal" fill="#1b2233" text-anchor="middle">≥ 99.96th percentile  ·  ≥ 3,071 HU</text>
 <text x="1585.0" y="1252.0" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="normal" font-style="normal" fill="#5b6475" text-anchor="middle">electrodes and teeth  ·  25,558 voxels</text>
 </g>
-<text x="40" y="1308" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG CT (public, BSD-3). Panel B: VoxTool 1.1.1 Electrode View; at most 120,000 points are drawn.</text>
+<text x="40" y="1308" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" font-style="italic" fill="#5b6475" text-anchor="start">Data: MNE-Python sample sEEG CT (public, BSD-3). Panel B: VoxTool 1.1.2 Electrode View; at most 120,000 points are drawn.</text>
 </svg>

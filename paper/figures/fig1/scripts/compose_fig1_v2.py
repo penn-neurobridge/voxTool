@@ -141,7 +141,7 @@ def build():
         text(1700, 170 + bhei + 116, "iEEG-recon, MNE, …", size=18, weight="bold"),
         '</g>',
         text(40, H - 30, "Example data: MNE-Python sample sEEG subject (public, BSD-3), "
-             "labeled in VoxTool 1.1.1.", size=14, fill=MUTED, italic=True),
+             "labeled in VoxTool 1.1.2.", size=14, fill=MUTED, italic=True),
         '</svg>',
     ]
     svg_path = FIG / "fig1_v2.svg"

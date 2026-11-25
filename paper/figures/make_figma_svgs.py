@@ -3,11 +3,16 @@
 The compose scripts write SVGs that render correctly in browsers and cairosvg but
 lean on features Figma's importer drops or mangles. This rewrites each one:
 
+- Layers: plain <g> groups are unwrapped, so every label, box and picture is
+  its own layer instead of part of a panel you have to double-click into.
 - Images: the SVGs link PNGs by relative path, which Figma cannot follow. Each
-  is embedded as a data URI, downscaled to at most 2x its size on the page
-  (and 4096 px, Figma's limit) to keep files small.
-- Arrowheads: drawn with <marker>, which Figma ignores. Each becomes a plain
-  triangle you can select and move.
+  becomes a rectangle whose fill is the picture (embedded, downscaled to at
+  most 2x its size on the page and 4096 px), the form Figma itself exports, so
+  it is one layer with editable corners rather than an image inside a mask.
+- Arrows: drawn with <marker>, which Figma ignores. Each becomes a group named
+  "arrow" (its line and a triangle head), selected and moved as one.
+- Drop shadows: rewritten as the filter chain Figma writes, so they come back
+  as an editable Drop shadow effect.
 - Hatched placeholders: a <pattern> fill becomes a flat grey.
 - Fonts: Helvetica and Menlo are not available to everyone in Figma, so text
   uses Inter and JetBrains Mono (both in Figma for all users). Inter is a
@@ -17,7 +22,7 @@ lean on features Figma's importer drops or mangles. This rewrites each one:
   position, because Figma places text-anchor text unreliably.
 - Multi-line <tspan> text becomes one text layer per line.
 
-Groups and their ids are kept, so panels arrive as named layers.
+Pictures are named after their source file.
 
     conda run -n voxfig python paper/figures/make_figma_svgs.py [--fonts DIR]
 
@@ -208,7 +213,10 @@ def arrowhead(tip_at, from_pt, stroke_w, fill):
 
 
 def fix_arrows(parent, markers, stats):
+    """Each marker arrow becomes one group named "arrow": its line plus a triangle."""
     for el in list(parent):
+        if el.tag == Q("g") and el.get("id", "").startswith("arrow"):
+            continue
         if len(el):
             fix_arrows(el, markers, stats)
         ms, me = el.attrib.pop("marker-start", None), el.attrib.pop("marker-end", None)
@@ -221,7 +229,10 @@ def fix_arrows(parent, markers, stats):
             s0, s1, e0, e1 = p0, p1, p1, p0
         else:
             s0, s1, e0, e1 = path_ends(el.get("d"))
-        idx = list(parent).index(el) + 1
+        group = ET.Element(Q("g"), {"id": "arrow" if not ms else "double arrow"})
+        idx = list(parent).index(el)
+        parent.remove(el)
+        group.append(el)
         for ref, tip_at, from_pt in ((me, e0, e1), (ms, s0, s1)):
             if not ref:
                 continue
@@ -229,29 +240,130 @@ def fix_arrows(parent, markers, stats):
             fill, orient = markers[mid]
             if ref is ms and orient != "auto-start-reverse":
                 tip_at, from_pt = s0, (2 * s0[0] - s1[0], 2 * s0[1] - s1[1])  # points along the path
-            parent.insert(idx, arrowhead(tip_at, from_pt, sw, fill))
-            stats["arrows"] += 1
+            group.append(arrowhead(tip_at, from_pt, sw, fill))
+        parent.insert(idx, group)
+        stats["arrows"] += 1
 
 
-def embed_images(root, src_dir, stats):
-    for el in root.iter(Q("image")):
-        href = el.get(f"{{{XLINK}}}href") or el.get("href")
-        if not href or href.startswith("data:"):
+def flatten_groups(parent):
+    """Unwrap plain <g> so every shape, label and image is its own layer in Figma.
+
+    Groups that carry a transform, clip, mask or filter are kept (unwrapping
+    them would change what is drawn).
+    """
+    for el in list(parent):
+        if el.tag == Q("g") and len(el):
+            flatten_groups(el)
+            keep = any(el.get(k) for k in ("transform", "clip-path", "mask", "filter"))
+            if not keep:
+                idx = list(parent).index(el)
+                parent.remove(el)
+                for k, ch in enumerate(list(el)):
+                    parent.insert(idx + k, ch)
+
+
+def _png_data_uri(path, display_w, display_h):
+    im = Image.open(path)
+    im.load()
+    target = min(MAX_PX, 2 * max(display_w, display_h))
+    factor = min(1.0, target / max(im.size))
+    if factor < 1.0:
+        im = im.resize((round(im.width * factor), round(im.height * factor)), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, "PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode(), im.size
+
+
+def images_to_fills(root, src_dir, defs, stats):
+    """<image> -> a rectangle with the picture as its fill, the way Figma itself
+    exports images, so each arrives as one layer with editable corners and
+    crop instead of a mask group."""
+    clips = {c.get("id"): c for c in root.iter(Q("clipPath"))}
+    used_clips = set()
+
+    def walk(parent):
+        for el in list(parent):
+            if len(el):
+                walk(el)
+            if el.tag != Q("image"):
+                continue
+            href = el.get(f"{{{XLINK}}}href") or el.get("href")
+            x, y = float(el.get("x", 0)), float(el.get("y", 0))
+            w, h = float(el.get("width")), float(el.get("height"))
+            uri, (iw, ih) = _png_data_uri((src_dir / href).resolve(), w, h)
+            mode = (el.get("preserveAspectRatio") or "xMidYMid meet").split()[-1]
+            if mode == "slice":
+                sc = max(w / iw, h / ih)
+                ox, oy = (w - iw * sc) / 2, (h - ih * sc) / 2
+                rx_, ry_, rw, rh = x, y, w, h
+                matrix = f"matrix({sc / w:.8g} 0 0 {sc / h:.8g} {ox / w:.8g} {oy / h:.8g})"
+            else:  # meet: shrink the rectangle to the picture itself
+                sc = min(w / iw, h / ih)
+                rw, rh = iw * sc, ih * sc
+                rx_, ry_ = x + (w - rw) / 2, y + (h - rh) / 2
+                matrix = f"matrix({1 / iw:.8g} 0 0 {1 / ih:.8g} 0 0)"
+            n = stats["images"]
+            stats["images"] += 1
+            pat = ET.SubElement(defs, Q("pattern"), {
+                "id": f"img-fill-{n}", "patternContentUnits": "objectBoundingBox",
+                "width": "1", "height": "1"})
+            ET.SubElement(pat, Q("use"), {f"{{{XLINK}}}href": f"#img-{n}", "transform": matrix})
+            ET.SubElement(defs, Q("image"), {"id": f"img-{n}", "width": str(iw), "height": str(ih),
+                                             f"{{{XLINK}}}href": uri})
+            rect = ET.Element(Q("rect"), {
+                "id": Path(href).stem.replace("_", " "),
+                "x": f"{rx_:.2f}", "y": f"{ry_:.2f}", "width": f"{rw:.2f}", "height": f"{rh:.2f}",
+                "fill": f"url(#img-fill-{n})"})
+            clip_ref = el.get("clip-path")
+            if clip_ref:
+                cid = re.search(r"#([^)]+)", clip_ref).group(1)
+                shape = next(iter(clips[cid]))
+                if shape.get("rx"):
+                    rect.set("rx", shape.get("rx"))
+                used_clips.add(cid)
+            idx = list(parent).index(el)
+            parent.remove(el)
+            parent.insert(idx, rect)
+
+    walk(root)
+
+    def drop_clips(parent):
+        for el in list(parent):
+            if el.tag == Q("clipPath") and el.get("id") in used_clips:
+                parent.remove(el)
+            elif len(el):
+                drop_clips(el)
+
+    drop_clips(root)
+
+
+def figma_shadow(root):
+    """feDropShadow -> the filter chain Figma writes for a drop shadow, which it
+    reads back as an editable Drop shadow effect."""
+    for f in root.iter(Q("filter")):
+        ds = f.find(Q("feDropShadow"))
+        if ds is None:
             continue
-        path = (src_dir / href).resolve()
-        im = Image.open(path)
-        im.load()
-        w, h = float(el.get("width")), float(el.get("height"))
-        target = min(MAX_PX, 2 * max(w, h))
-        factor = min(1.0, target / max(im.size))
-        if factor < 1.0:
-            im = im.resize((round(im.width * factor), round(im.height * factor)), Image.LANCZOS)
-        buf = io.BytesIO()
-        im.save(buf, "PNG", optimize=True)
-        uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-        el.set("href", uri)
-        el.set(f"{{{XLINK}}}href", uri)
-        stats["images"] += 1
+        dx, dy = ds.get("dx", "0"), ds.get("dy", "0")
+        sd, op = ds.get("stdDeviation", "4"), ds.get("flood-opacity", "0.25")
+        for ch in list(f):
+            f.remove(ch)
+        f.set("color-interpolation-filters", "sRGB")
+        steps = [
+            ("feFlood", {"flood-opacity": "0", "result": "BackgroundImageFix"}),
+            ("feColorMatrix", {"in": "SourceAlpha", "type": "matrix", "result": "hardAlpha",
+                               "values": "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"}),
+            ("feOffset", {"dx": dx, "dy": dy}),
+            ("feGaussianBlur", {"stdDeviation": sd}),
+            ("feColorMatrix", {"type": "matrix",
+                               "values": f"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 {op} 0"}),
+            ("feBlend", {"mode": "normal", "in2": "BackgroundImageFix",
+                         "result": "effect1_dropShadow"}),
+            ("feBlend", {"mode": "normal", "in": "SourceGraphic", "in2": "effect1_dropShadow",
+                         "result": "shape"}),
+        ]
+        for tag, attrs in steps:
+            ET.SubElement(f, Q(tag), attrs)
 
 
 def convert(rel, measure):
@@ -265,8 +377,14 @@ def convert(rel, measure):
         shape = next(iter(m))
         markers[m.get("id")] = (shape.get("fill", "#000"), m.get("orient", "auto"))
 
-    embed_images(root, src.parent, stats)
+    defs = root.find(Q("defs"))
+    if defs is None:
+        defs = ET.Element(Q("defs"))
+        root.insert(0, defs)
+    flatten_groups(root)
+    images_to_fills(root, src.parent, defs, stats)
     fix_arrows(root, markers, stats)
+    figma_shadow(root)
     split_multiline(root)
     for el in root.iter():
         if el.get("fill", "").startswith("url(#hatch"):
@@ -275,14 +393,14 @@ def convert(rel, measure):
         fix_text(el, measure, stats)
     for defs in root.iter(Q("defs")):
         for child in list(defs):
-            if child.tag in (Q("marker"), Q("pattern")):
+            if child.tag == Q("marker") or (child.tag == Q("pattern") and child.get("id") == "hatch"):
                 defs.remove(child)
 
     OUT.mkdir(exist_ok=True)
     dst = OUT / (src.stem + "_figma.svg")
     tree.write(dst, encoding="utf-8", xml_declaration=True)
     mb = dst.stat().st_size / 1e6
-    print(f"{dst.name}: {stats['images']} images embedded, {stats['arrows']} arrowheads, "
+    print(f"{dst.name}: {stats['images']} images as fills, {stats['arrows']} arrows, "
           f"{stats['anchored']} labels re-anchored, {stats['resized']} resized to fit; {mb:.1f} MB")
     return dst
 
